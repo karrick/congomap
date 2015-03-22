@@ -89,16 +89,34 @@ Some maps are used as a lazy lookup device. When a key is not already
 found in the map, the lookup callback function is invoked with the
 specified key, and the returned value is stored in the `Congomap`, and
 returned from this method. If the lookup callback function returns an
-error, then this method returns nil for the value, and the error.
+error, then this method returns `nil` for the value along with the
+error returned by the lookup callback function.
 
 ```Go
+// Define a lookup function to be invoked when LoadStore is called
+// for a key not stored in the Congomap.
 lookup := func(key string) (interface{}, error) {
     return someLenghyComputation(key), nil
 }
+
+// Create a Congomap, specifying what the lookup callback function
+// is.
 cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(lookup))
 if err != nil {
     log.Fatal(err)
 }
+
+// You can still use the regular Load and Store functions, which will
+// not involve the lookup function.
+cgm.Store("someKey", 42)
+value, ok := cgm.Load("someKey")
+if !ok {
+    // key is not in the Congomap
+}
+
+// When you use the LoadStore function, and the key is not in the
+// Congomap, the lookup funciton is invoked, and the return value is
+// stored in the Congomap and returned to the program.
 value, err := cgm.LoadStore("someKey")
 if err != nil {
     // lookup functio returned an error
