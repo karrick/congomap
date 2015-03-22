@@ -11,25 +11,25 @@ most performant code.
 ## Examples
 
 This library exposes the `Congomap` interface, and three concrete
-types that adhere to the Congomap interface. All three concrete types
-are available here because they have individual performance
+types that adhere to that interface. All three concrete types are
+available here because they have individual performance
 characteristics, where one concrete type may be more appropriate for a
 desired used that one of the other types.
 
 ### Creating a Congomap
 
-Creating a Congomap is done by calling the instantiation function of
+Creating a `Congomap` is done by calling the instantiation function of
 the desired concrete type.
 
-Note that to prevent resource leakage, always call the `Halt` method
-on a Congomap after it is no longer needed.
+NOTE: To prevent resource leakage, always call the `Halt` method on a
+`Congomap` after it is no longer needed.
 
 #### NewSyncMutexMap
 
 A sync mutex map uses simple read/write mutex primitives from the
 `sync` package. This results in a highly performant way of
 synchronizing reads and writes to the map. This is about seven times
-the performance of the NewChannelMap method and is the fastest of
+the performance of the `NewChannelMap` method and is the fastest of
 those tested in this library.
 
 ```Go
@@ -63,7 +63,7 @@ defer cgm.Halt()
 
 ### Storing values in a Congomap
 
-Storing key value pairs in a Congomap is done with the Store method.
+Storing key value pairs in a `Congomap` is done with the Store method.
 
 ```Go
 cgm.Store("someKey", 42)
@@ -73,7 +73,7 @@ cgm.Store("yetAnotherKey", make(chan interface{}))
 
 ### Loading values from a Congomap
 
-Loading values already stored in a Congomap is done with the Load
+Loading values already stored in a `Congomap` is done with the Load
 method.
 
 ```Go
@@ -87,7 +87,7 @@ if !ok {
 
 Some maps are used as a lazy lookup device. When a key is not already
 found in the map, the lookup callback function is invoked with the
-specified key, and the returned value is stored in the Congomap, and
+specified key, and the returned value is stored in the `Congomap`, and
 returned from this method. If the lookup callback function returns an
 error, then this method returns nil for the value, and the error.
 
