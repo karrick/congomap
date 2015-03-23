@@ -1,9 +1,5 @@
 package congomap
 
-import (
-	"fmt"
-)
-
 type channelMap struct {
 	db     map[string]interface{}
 	lookup func(string) (interface{}, error)
@@ -28,7 +24,7 @@ func NewChannelMap(setters ...CongomapSetter) (Congomap, error) {
 	}
 	if cgm.lookup == nil {
 		cgm.lookup = func(_ string) (interface{}, error) {
-			return nil, fmt.Errorf("no lookup function set")
+			return nil, errNoLookupCallbackSet
 		}
 	}
 	go cgm.run_queue()

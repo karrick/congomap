@@ -1,5 +1,11 @@
 package congomap
 
+import (
+	"errors"
+)
+
+var errNoLookupCallbackSet = errors.New("congomap: no lookup callback function set")
+
 type Congomap interface {
 	Delete(string)
 	Halt()

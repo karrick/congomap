@@ -1,7 +1,6 @@
 package congomap
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -24,7 +23,7 @@ func NewSyncAtomicMap(setters ...CongomapSetter) (Congomap, error) {
 	}
 	if cgm.lookup == nil {
 		cgm.lookup = func(_ string) (interface{}, error) {
-			return nil, fmt.Errorf("no lookup function set")
+			return nil, errNoLookupCallbackSet
 		}
 	}
 	return cgm, nil
