@@ -86,11 +86,11 @@ if !ok {
 ### Lazy Lookups using LoadStore
 
 Some maps are used as a lazy lookup device. When a key is not already
-found in the map, the lookup callback function is invoked with the
-specified key, and the returned value is stored in the `Congomap`, and
-returned from this method. If the lookup callback function returns an
-error, then this method returns `nil` for the value along with the
-error returned by the lookup callback function.
+found in the map, the callback function is invoked with the specified
+key. If the callback function returns an error, then a nil value and
+the error is returned from `LoadStore`. If the callback function
+returns no error, then the returned value is stored in the `Congomap`
+and returned from `LoadStore`.
 
 ```Go
 // Define a lookup function to be invoked when LoadStore is called
