@@ -97,8 +97,8 @@ func TestChannelPairs(t *testing.T) {
 	values := make([]interface{}, 0)
 
 	for pair := range cgm.Pairs() {
-		keys = append(keys, pair.key)
-		values = append(values, pair.value)
+		keys = append(keys, pair.Key)
+		values = append(values, pair.Value)
 	}
 
 	if len(keys) != 2 {

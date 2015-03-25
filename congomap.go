@@ -18,8 +18,8 @@ type Congomap interface {
 }
 
 type Pair struct {
-	key   string
-	value interface{}
+	Key   string
+	Value interface{}
 }
 
 type CongomapSetter func(Congomap) error
