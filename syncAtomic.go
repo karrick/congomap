@@ -118,6 +118,24 @@ func (cgm syncAtomicMap) Keys() []string {
 	return keys
 }
 
+// Pairs returns a channel through which key value pairs are
+// read. Pairs will lock the Congomap so that no other accessors can
+// be used until the returned channel is closed.
+func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
+	cgm.lock.Lock()
+	defer cgm.lock.Unlock()
+
+	pairs := make(chan *Pair)
+	go func(pairs chan<- *Pair) {
+		m1 := cgm.db.Load().(map[string]interface{}) // load current value of the data structure
+		for k, v := range m1 {
+			pairs <- &Pair{k, v}
+		}
+		close(pairs)
+	}(pairs)
+	return pairs
+}
+
 // Halt releases resources used by the Congomap.
 func (_ syncAtomicMap) Halt() {
 	// no-operation

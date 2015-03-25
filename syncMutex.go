@@ -87,6 +87,23 @@ func (cgm *syncMutexMap) Keys() (keys []string) {
 	return
 }
 
+// Pairs returns a channel through which key value pairs are
+// read. Pairs will lock the Congomap so that no other accessors can
+// be used until the returned channel is closed.
+func (cgm *syncMutexMap) Pairs() <-chan *Pair {
+	cgm.lock.RLock()
+	defer cgm.lock.RUnlock()
+
+	pairs := make(chan *Pair)
+	go func(pairs chan<- *Pair) {
+		for k, v := range cgm.db {
+			pairs <- &Pair{k, v}
+		}
+		close(pairs)
+	}(pairs)
+	return pairs
+}
+
 // Halt releases resources used by the Congomap.
 func (_ syncMutexMap) Halt() {
 	// no-operation

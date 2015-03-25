@@ -88,3 +88,23 @@ func TestSyncMutexNotLazyLoadingDoesNotInvokeSetter(t *testing.T) {
 		t.Errorf("Actual: %#v; Expected: %#v", setterInvoked, false)
 	}
 }
+
+func TestSyncMutexPairs(t *testing.T) {
+	cgm, _ := NewSyncMutexMap()
+	cgm.Store("foo", "FOO")
+	cgm.Store("bar", "BAR")
+	keys := make([]string, 0)
+	values := make([]interface{}, 0)
+
+	for pair := range cgm.Pairs() {
+		keys = append(keys, pair.key)
+		values = append(values, pair.value)
+	}
+
+	if len(keys) != 2 {
+		t.Errorf("Actual: %#v; Expected: %#v", len(keys), 2)
+	}
+	if len(values) != 2 {
+		t.Errorf("Actual: %#v; Expected: %#v", len(values), 2)
+	}
+}

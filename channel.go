@@ -92,6 +92,20 @@ func (cgm channelMap) Keys() []string {
 	return keys
 }
 
+// Pairs returns a channel through which key value pairs are
+// read. Pairs will lock the Congomap so that no other accessors can
+// be used until the returned channel is closed.
+func (cgm *channelMap) Pairs() <-chan *Pair {
+	pairs := make(chan *Pair)
+	cgm.queue <- func() {
+		for k, v := range cgm.db {
+			pairs <- &Pair{k, v}
+		}
+		close(pairs)
+	}
+	return pairs
+}
+
 // Halt releases resources used by the Congomap.
 func (cgm *channelMap) Halt() {
 	cgm.quit <- struct{}{}
