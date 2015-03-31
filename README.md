@@ -132,13 +132,13 @@ a sample run on my Mac using Go 1.4:
 ```bash
 go test -bench .
 PASS
-BenchmarkChannelMapLoad  1000000          1446 ns/op
-BenchmarkChannelMapLoadStore     1000000          1610 ns/op
-BenchmarkSyncAtomicMapLoad	10000000           231 ns/op
-BenchmarkSyncAtomicMapLoadStore  5000000           227 ns/op
-BenchmarkSyncMutexMapLoad	10000000           199 ns/op
-BenchmarkSyncMutexMapLoadStore   5000000           219 ns/op
-BenchmarkSyncMutexMapManyLoadersLoaderPerspective    2000000           690 ns/op
-BenchmarkSyncMutexMapManyLoadersLoadStorerPerspective    1000000          9182 ns/op
-ok      gitli.corp.linkedin.com/sre-infra/cmap.git	22.076s
+BenchmarkChannelMapLoad	 1000000	      1533 ns/op
+BenchmarkChannelMapLoadStore	 1000000	      1569 ns/op
+BenchmarkSyncAtomicMapLoad	 5000000	       262 ns/op
+BenchmarkSyncAtomicMapLoadTTL	 3000000	       412 ns/op
+BenchmarkSyncAtomicMapLoadStore	10000000	       229 ns/op
+BenchmarkSyncMutexMapLoad	10000000	       197 ns/op
+BenchmarkSyncMutexMapLoadTTL	10000000	       197 ns/op
+BenchmarkSyncMutexMapLoadStore	10000000	       213 ns/op
+ok  	github.com/karrick/congomap	15.676s
 ```
