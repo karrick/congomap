@@ -8,17 +8,17 @@ import (
 
 type syncAtomicMap struct {
 	db       atomic.Value
-	lookup   func(string) (interface{}, error)
-	lock     sync.Mutex // used only by writers
 	duration time.Duration
+	halt     chan struct{}
+	lock     sync.Mutex // used only by writers
+	lookup   func(string) (interface{}, error)
 	ttl      bool
-	done     chan struct{}
 }
 
 // NewSyncAtomicMap returns a map that uses sync/atomic.Value to serialize
 // access.
-func NewSyncAtomicMap(setters ...CongomapSetter) (Congomap, error) {
-	cgm := &syncAtomicMap{done: make(chan struct{})}
+func NewSyncAtomicMap(setters ...Setter) (Congomap, error) {
+	cgm := &syncAtomicMap{halt: make(chan struct{})}
 	cgm.db.Store(make(map[string]expiringValue))
 	for _, setter := range setters {
 		if err := setter(cgm); err != nil {
@@ -30,7 +30,7 @@ func NewSyncAtomicMap(setters ...CongomapSetter) (Congomap, error) {
 			return nil, ErrNoLookupDefined{}
 		}
 	}
-	go cgm.run_queue()
+	go cgm.run()
 	return cgm, nil
 }
 
@@ -41,6 +41,7 @@ func (cgm *syncAtomicMap) Lookup(lookup func(string) (interface{}, error)) error
 	return nil
 }
 
+// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *syncAtomicMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
@@ -149,9 +150,12 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 
 	pairs := make(chan *Pair)
 	go func(pairs chan<- *Pair) {
-		m1 := cgm.db.Load().(map[string]interface{}) // load current value of the data structure
+		m1 := cgm.db.Load().(map[string]expiringValue) // load current value of the data structure
+		now := time.Now().UnixNano()
 		for k, v := range m1 {
-			pairs <- &Pair{k, v}
+			if !cgm.ttl || (v.expiry > now) {
+				pairs <- &Pair{k, v}
+			}
 		}
 		close(pairs)
 	}(pairs)
@@ -160,10 +164,10 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 
 // Halt releases resources used by the Congomap.
 func (cgm *syncAtomicMap) Halt() {
-	cgm.done <- struct{}{}
+	cgm.halt <- struct{}{}
 }
 
-func (cgm *syncAtomicMap) run_queue() {
+func (cgm *syncAtomicMap) run() {
 	duration := 5 * cgm.duration
 	if !cgm.ttl {
 		duration = time.Hour
@@ -174,7 +178,7 @@ func (cgm *syncAtomicMap) run_queue() {
 		select {
 		case <-time.After(duration):
 			cgm.GC()
-		case <-cgm.done:
+		case <-cgm.halt:
 			break
 		}
 	}

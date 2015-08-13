@@ -6,21 +6,21 @@ import (
 
 type channelMap struct {
 	db       map[string]expiringValue
+	duration time.Duration
+	halt     chan struct{}
 	lookup   func(string) (interface{}, error)
 	queue    chan func()
-	duration time.Duration
 	ttl      bool
-	done     chan struct{}
 }
 
 // NewChannelMap returns a map that uses channels to serialize
 // access. Note that it is important to call the Halt method on the
 // returned data structure when it's no longer needed to free CPU and
 // channel resources back to the runtime.
-func NewChannelMap(setters ...CongomapSetter) (Congomap, error) {
+func NewChannelMap(setters ...Setter) (Congomap, error) {
 	cgm := &channelMap{
 		db:    make(map[string]expiringValue),
-		done:  make(chan struct{}),
+		halt:  make(chan struct{}),
 		queue: make(chan func()),
 	}
 	for _, setter := range setters {
@@ -33,7 +33,7 @@ func NewChannelMap(setters ...CongomapSetter) (Congomap, error) {
 			return nil, ErrNoLookupDefined{}
 		}
 	}
-	go cgm.run_queue()
+	go cgm.run()
 	return cgm, nil
 }
 
@@ -44,6 +44,7 @@ func (cgm *channelMap) Lookup(lookup func(string) (interface{}, error)) error {
 	return nil
 }
 
+// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *channelMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
@@ -150,8 +151,11 @@ func (cgm channelMap) Keys() []string {
 func (cgm *channelMap) Pairs() <-chan *Pair {
 	pairs := make(chan *Pair)
 	cgm.queue <- func() {
+		now := time.Now().UnixNano()
 		for k, v := range cgm.db {
-			pairs <- &Pair{k, v}
+			if !cgm.ttl || (v.expiry > now) {
+				pairs <- &Pair{k, v}
+			}
 		}
 		close(pairs)
 	}
@@ -160,7 +164,7 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 
 // Halt releases resources used by the Congomap.
 func (cgm *channelMap) Halt() {
-	cgm.done <- struct{}{}
+	cgm.halt <- struct{}{}
 }
 
 type result struct {
@@ -169,7 +173,7 @@ type result struct {
 	err   error
 }
 
-func (cgm *channelMap) run_queue() {
+func (cgm *channelMap) run() {
 	duration := 5 * cgm.duration
 	if !cgm.ttl {
 		duration = time.Hour
@@ -182,7 +186,7 @@ func (cgm *channelMap) run_queue() {
 			fn()
 		case <-time.After(duration):
 			cgm.GC()
-		case <-cgm.done:
+		case <-cgm.halt:
 			break
 		}
 	}

@@ -7,19 +7,19 @@ import (
 
 type syncMutexMap struct {
 	db       map[string]expiringValue
-	lookup   func(string) (interface{}, error)
-	lock     sync.RWMutex
 	duration time.Duration
+	halt     chan struct{}
+	lock     sync.RWMutex
+	lookup   func(string) (interface{}, error)
 	ttl      bool
-	done     chan struct{}
 }
 
-// NewMutexMap returns a map that uses sync.RWMutexMap to serialize
+// NewSyncMutexMap returns a map that uses sync.RWMutex to serialize
 // access. Keys must be strings.
-func NewSyncMutexMap(setters ...CongomapSetter) (Congomap, error) {
+func NewSyncMutexMap(setters ...Setter) (Congomap, error) {
 	cgm := &syncMutexMap{
 		db:   make(map[string]expiringValue),
-		done: make(chan struct{}),
+		halt: make(chan struct{}),
 	}
 	for _, setter := range setters {
 		if err := setter(cgm); err != nil {
@@ -31,7 +31,7 @@ func NewSyncMutexMap(setters ...CongomapSetter) (Congomap, error) {
 			return nil, ErrNoLookupDefined{}
 		}
 	}
-	go cgm.run_queue()
+	go cgm.run()
 	return cgm, nil
 }
 
@@ -42,6 +42,7 @@ func (cgm *syncMutexMap) Lookup(lookup func(string) (interface{}, error)) error 
 	return nil
 }
 
+// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *syncMutexMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
@@ -154,10 +155,10 @@ func (cgm *syncMutexMap) Pairs() <-chan *Pair {
 
 // Halt releases resources used by the Congomap.
 func (cgm *syncMutexMap) Halt() {
-	cgm.done <- struct{}{}
+	cgm.halt <- struct{}{}
 }
 
-func (cgm *syncMutexMap) run_queue() {
+func (cgm *syncMutexMap) run() {
 	duration := 5 * cgm.duration
 	if !cgm.ttl {
 		duration = time.Hour
@@ -168,7 +169,7 @@ func (cgm *syncMutexMap) run_queue() {
 		select {
 		case <-time.After(duration):
 			cgm.GC()
-		case <-cgm.done:
+		case <-cgm.halt:
 			break
 		}
 	}
