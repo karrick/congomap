@@ -8,6 +8,8 @@ library, each with their own performance characteristics, but I wrote
 it to determine which method produced the most readable code, and the
 most performant code.
 
+[![GoDoc](https://godoc.org/github.com/karrick/congomap?status.svg)](https://godoc.org/github.com/karrick/congomap)
+
 ## Examples
 
 This library exposes the `Congomap` interface, and three concrete
