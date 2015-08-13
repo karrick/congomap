@@ -2,18 +2,25 @@ package congomap
 
 import (
 	"sync"
+	"time"
 )
 
 type syncMutexMap struct {
-	db     map[string]interface{}
-	lookup func(string) (interface{}, error)
-	lock   sync.RWMutex
+	db       map[string]expiringValue
+	lookup   func(string) (interface{}, error)
+	lock     sync.RWMutex
+	duration time.Duration
+	ttl      bool
+	done     chan struct{}
 }
 
 // NewMutexMap returns a map that uses sync.RWMutexMap to serialize
 // access. Keys must be strings.
 func NewSyncMutexMap(setters ...CongomapSetter) (Congomap, error) {
-	cgm := &syncMutexMap{db: make(map[string]interface{})}
+	cgm := &syncMutexMap{
+		db:   make(map[string]expiringValue),
+		done: make(chan struct{}),
+	}
 	for _, setter := range setters {
 		if err := setter(cgm); err != nil {
 			return nil, err
@@ -21,9 +28,10 @@ func NewSyncMutexMap(setters ...CongomapSetter) (Congomap, error) {
 	}
 	if cgm.lookup == nil {
 		cgm.lookup = func(_ string) (interface{}, error) {
-			return nil, errNoLookupCallbackSet
+			return nil, ErrNoLookupDefined{}
 		}
 	}
+	go cgm.run_queue()
 	return cgm, nil
 }
 
@@ -34,11 +42,39 @@ func (cgm *syncMutexMap) Lookup(lookup func(string) (interface{}, error)) error 
 	return nil
 }
 
+func (cgm *syncMutexMap) TTL(duration time.Duration) error {
+	if duration <= 0 {
+		return ErrInvalidDuration(duration)
+	}
+	cgm.duration = duration
+	cgm.ttl = true
+	return nil
+}
+
 // Delete removes a key value pair from a Congomap.
 func (cgm *syncMutexMap) Delete(key string) {
 	cgm.lock.Lock()
-	defer cgm.lock.Unlock()
 	delete(cgm.db, key)
+	cgm.lock.Unlock()
+}
+
+// GC forces elimination of keys in Congomap with values that have
+// expired.
+func (cgm *syncMutexMap) GC() {
+	if cgm.ttl {
+		cgm.lock.Lock()
+		now := time.Now().UnixNano()
+		keysToRemove := make([]string, 0)
+		for key, ev := range cgm.db {
+			if ev.expiry < now {
+				keysToRemove = append(keysToRemove, key)
+			}
+		}
+		for _, key := range keysToRemove {
+			delete(cgm.db, key)
+		}
+		cgm.lock.Unlock()
+	}
 }
 
 // Load gets the value associated with the given key. When the key is
@@ -47,15 +83,22 @@ func (cgm *syncMutexMap) Delete(key string) {
 func (cgm *syncMutexMap) Load(key string) (interface{}, bool) {
 	cgm.lock.RLock()
 	defer cgm.lock.RUnlock()
-	v, ok := cgm.db[key]
-	return v, ok
+	ev, ok := cgm.db[key]
+	if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
+		return ev.value, true
+	}
+	return nil, false
 }
 
 // Store sets the value associated with the given key.
 func (cgm *syncMutexMap) Store(key string, value interface{}) {
 	cgm.lock.Lock()
-	defer cgm.lock.Unlock()
-	cgm.db[key] = value
+	ev := expiringValue{value: value}
+	if cgm.ttl {
+		ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+	}
+	cgm.db[key] = ev
+	cgm.lock.Unlock()
 }
 
 // LoadStore gets the value associated with the given key if it's in
@@ -64,15 +107,20 @@ func (cgm *syncMutexMap) Store(key string, value interface{}) {
 func (cgm *syncMutexMap) LoadStore(key string) (interface{}, error) {
 	cgm.lock.Lock()
 	defer cgm.lock.Unlock()
-	value, ok := cgm.db[key]
-	if !ok {
-		var err error
-		value, err = cgm.lookup(key)
-		if err != nil {
-			return nil, err
-		}
-		cgm.db[key] = value
+	ev, ok := cgm.db[key]
+	if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
+		return ev.value, nil
 	}
+	// key was expired or not in db
+	value, err := cgm.lookup(key)
+	if err != nil {
+		return nil, err
+	}
+	ev = expiringValue{value: value}
+	if cgm.ttl {
+		ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+	}
+	cgm.db[key] = ev
 	return value, nil
 }
 
@@ -81,13 +129,28 @@ func (cgm *syncMutexMap) Keys() (keys []string) {
 	cgm.lock.RLock()
 	defer cgm.lock.RUnlock()
 	keys = make([]string, 0, len(cgm.db))
-	for k, _ := range cgm.db {
+	for k := range cgm.db {
 		keys = append(keys, k)
 	}
 	return
 }
 
 // Halt releases resources used by the Congomap.
-func (_ syncMutexMap) Halt() {
-	// no-operation
+func (cgm *syncMutexMap) Halt() {
+	cgm.done <- struct{}{}
+}
+
+func (cgm *syncMutexMap) run_queue() {
+	duration := 5 * cgm.duration
+	if duration < time.Second {
+		duration = time.Hour
+	}
+	for {
+		select {
+		case <-time.After(duration):
+			cgm.GC()
+		case <-cgm.done:
+			break
+		}
+	}
 }
