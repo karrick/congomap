@@ -77,7 +77,7 @@ func (cgm *syncAtomicMap) GC() {
 // Load gets the value associated with the given key. When the key is
 // in the map, it returns the value associated with the key and
 // true. Otherwise it returns nil for the value and false.
-func (cgm syncAtomicMap) Load(key string) (interface{}, bool) {
+func (cgm *syncAtomicMap) Load(key string) (interface{}, bool) {
 	ev, ok := cgm.db.Load().(map[string]expiringValue)[key]
 	if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
 		return ev.value, true
@@ -132,7 +132,7 @@ func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 }
 
 // Keys returns an array of key values stored in the map.
-func (cgm syncAtomicMap) Keys() []string {
+func (cgm *syncAtomicMap) Keys() []string {
 	keys := make([]string, 0)
 	m1 := cgm.db.Load().(map[string]expiringValue) // load current value of the data structure
 	for k := range m1 {
