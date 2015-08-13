@@ -3,6 +3,7 @@ package congomap
 import (
 	"math/rand"
 	"testing"
+	"time"
 )
 
 var states = []string{
@@ -139,6 +140,12 @@ func BenchmarkSyncAtomicMapLoad(b *testing.B) {
 	parallelLoaders(b, cm)
 }
 
+func BenchmarkSyncAtomicMapLoadTTL(b *testing.B) {
+	cm, _ := NewSyncAtomicMap(TTL(time.Second))
+	defer cm.Halt()
+	parallelLoaders(b, cm)
+}
+
 func BenchmarkSyncAtomicMapLoadStore(b *testing.B) {
 	cm, _ := NewSyncAtomicMap()
 	defer cm.Halt()
@@ -147,6 +154,12 @@ func BenchmarkSyncAtomicMapLoadStore(b *testing.B) {
 
 func BenchmarkSyncMutexMapLoad(b *testing.B) {
 	cm, _ := NewSyncMutexMap()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
+}
+
+func BenchmarkSyncMutexMapLoadTTL(b *testing.B) {
+	cm, _ := NewSyncMutexMap(TTL(time.Second))
 	defer cm.Halt()
 	parallelLoaders(b, cm)
 }
