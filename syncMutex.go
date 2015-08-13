@@ -159,8 +159,10 @@ func (cgm *syncMutexMap) Halt() {
 
 func (cgm *syncMutexMap) run_queue() {
 	duration := 5 * cgm.duration
-	if duration < time.Second {
+	if !cgm.ttl {
 		duration = time.Hour
+	} else if duration < time.Second {
+		duration = time.Minute
 	}
 	for {
 		select {
