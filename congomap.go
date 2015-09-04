@@ -9,11 +9,12 @@ type Congomap interface {
 	Delete(string)
 	GC()
 	Halt()
-	Pairs() <-chan *Pair
 	Keys() []string
 	Load(string) (interface{}, bool)
 	LoadStore(string) (interface{}, error)
 	Lookup(func(string) (interface{}, error)) error
+	Pairs() <-chan *Pair
+	Reaper(func(interface{})) error
 	Store(string, interface{})
 	TTL(time.Duration) error
 }
@@ -36,6 +37,14 @@ type Setter func(Congomap) error
 func Lookup(lookup func(string) (interface{}, error)) Setter {
 	return func(cgm Congomap) error {
 		return cgm.Lookup(lookup)
+	}
+}
+
+// Reaper is used to specify what function is to be called when
+// garbage collecting item from the Congomap.
+func Reaper(reaper func(interface{})) Setter {
+	return func(cgm Congomap) error {
+		return cgm.Reaper(reaper)
 	}
 }
 

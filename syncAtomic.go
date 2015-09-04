@@ -12,6 +12,7 @@ type syncAtomicMap struct {
 	halt     chan struct{}
 	lock     sync.Mutex // used only by writers
 	lookup   func(string) (interface{}, error)
+	reaper   func(interface{})
 	ttl      bool
 }
 
@@ -41,6 +42,13 @@ func (cgm *syncAtomicMap) Lookup(lookup func(string) (interface{}, error)) error
 	return nil
 }
 
+// Reaper is used to specify what function is to be called when
+// garbage collecting item from the Congomap.
+func (cgm *syncAtomicMap) Reaper(reaper func(interface{})) error {
+	cgm.reaper = reaper
+	return nil
+}
+
 // TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *syncAtomicMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
@@ -55,6 +63,11 @@ func (cgm *syncAtomicMap) TTL(duration time.Duration) error {
 func (cgm *syncAtomicMap) Delete(key string) {
 	cgm.lock.Lock() // synchronize with other potential writers
 	m := cgm.copyNonExpiredData(nil)
+	if cgm.reaper != nil {
+		if ev, ok := m[key]; ok {
+			cgm.reaper(ev.value)
+		}
+	}
 	delete(m, key)  // remove the specified item
 	cgm.db.Store(m) // atomically replace the current object with the new one
 	// At this point all new readers start working with the new version.
@@ -196,6 +209,8 @@ func (cgm *syncAtomicMap) copyNonExpiredData(m1 map[string]expiringValue) map[st
 	for k, v := range m1 {
 		if !cgm.ttl || v.expiry > now {
 			m2[k] = v // copy non-expired data from the current object to the new one
+		} else if cgm.reaper != nil {
+			cgm.reaper(v.value)
 		}
 	}
 	return m2

@@ -339,3 +339,95 @@ func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
 }
+
+////////////////////////////////////////
+// Reaper()
+
+func TestReaperInvokedDuringDelete(t *testing.T) {
+	expected := 42
+	var invoked bool
+
+	var which string
+
+	reaper := func(value interface{}) {
+		invoked = true
+		if v, ok := value.(int); !ok || v != expected {
+			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
+		}
+	}
+
+	cgm, _ := NewChannelMap(Reaper(reaper))
+	which = "channel"
+	cgm.Store("hit", 42)
+	cgm.Delete("hit")
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
+	which = "sync-atomic"
+	cgm.Store("hit", 42)
+	cgm.Delete("hit")
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncMutexMap(Reaper(reaper))
+	which = "sync-mutex"
+	cgm.Store("hit", 42)
+	cgm.Delete("hit")
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+}
+
+func TestReaperInvokedDuringGC(t *testing.T) {
+	expected := 42
+	var invoked bool
+
+	var which string
+
+	reaper := func(value interface{}) {
+		invoked = true
+		if v, ok := value.(int); !ok || v != expected {
+			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
+		}
+	}
+
+	cgm, _ := NewChannelMap(TTL(time.Nanosecond), Reaper(reaper))
+	which = "channel"
+	cgm.Store("hit", 42)
+	time.Sleep(time.Millisecond)
+	cgm.GC()
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond), Reaper(reaper))
+	which = "sync-atomic"
+	cgm.Store("hit", 42)
+	time.Sleep(time.Millisecond)
+	cgm.GC()
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncMutexMap(TTL(time.Nanosecond), Reaper(reaper))
+	which = "sync-mutex"
+	cgm.Store("hit", 42)
+	time.Sleep(time.Millisecond)
+	cgm.GC()
+	cgm.Halt()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+}

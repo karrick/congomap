@@ -10,6 +10,7 @@ type channelMap struct {
 	halt     chan struct{}
 	lookup   func(string) (interface{}, error)
 	queue    chan func()
+	reaper   func(interface{})
 	ttl      bool
 }
 
@@ -44,6 +45,13 @@ func (cgm *channelMap) Lookup(lookup func(string) (interface{}, error)) error {
 	return nil
 }
 
+// Reaper is used to specify what function is to be called when
+// garbage collecting item from the Congomap.
+func (cgm *channelMap) Reaper(reaper func(interface{})) error {
+	cgm.reaper = reaper
+	return nil
+}
+
 // TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *channelMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
@@ -57,6 +65,11 @@ func (cgm *channelMap) TTL(duration time.Duration) error {
 // Delete removes a key value pair from a Congomap.
 func (cgm *channelMap) Delete(key string) {
 	cgm.queue <- func() {
+		if cgm.reaper != nil {
+			if ev, ok := cgm.db[key]; ok {
+				cgm.reaper(ev.value)
+			}
+		}
 		delete(cgm.db, key)
 	}
 }
@@ -74,6 +87,9 @@ func (cgm *channelMap) GC() {
 				}
 			}
 			for _, key := range keysToRemove {
+				if cgm.reaper != nil {
+					cgm.reaper(cgm.db[key].value)
+				}
 				delete(cgm.db, key)
 			}
 		}

@@ -11,6 +11,7 @@ type syncMutexMap struct {
 	halt     chan struct{}
 	lock     sync.RWMutex
 	lookup   func(string) (interface{}, error)
+	reaper   func(interface{})
 	ttl      bool
 }
 
@@ -42,6 +43,13 @@ func (cgm *syncMutexMap) Lookup(lookup func(string) (interface{}, error)) error 
 	return nil
 }
 
+// Reaper is used to specify what function is to be called when
+// garbage collecting item from the Congomap.
+func (cgm *syncMutexMap) Reaper(reaper func(interface{})) error {
+	cgm.reaper = reaper
+	return nil
+}
+
 // TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *syncMutexMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
@@ -55,6 +63,11 @@ func (cgm *syncMutexMap) TTL(duration time.Duration) error {
 // Delete removes a key value pair from a Congomap.
 func (cgm *syncMutexMap) Delete(key string) {
 	cgm.lock.Lock()
+	if cgm.reaper != nil {
+		if ev, ok := cgm.db[key]; ok {
+			cgm.reaper(ev.value)
+		}
+	}
 	delete(cgm.db, key)
 	cgm.lock.Unlock()
 }
@@ -72,6 +85,9 @@ func (cgm *syncMutexMap) GC() {
 			}
 		}
 		for _, key := range keysToRemove {
+			if cgm.reaper != nil {
+				cgm.reaper(cgm.db[key].value)
+			}
 			delete(cgm.db, key)
 		}
 		cgm.lock.Unlock()
