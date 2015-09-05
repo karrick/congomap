@@ -196,14 +196,21 @@ func (cgm *channelMap) run() {
 	} else if duration < time.Second {
 		duration = time.Minute
 	}
-	for {
+	active := true
+	for active {
 		select {
 		case fn := <-cgm.queue:
 			fn()
 		case <-time.After(duration):
 			cgm.GC()
 		case <-cgm.halt:
+			active = false
 			break
+		}
+	}
+	if cgm.reaper != nil {
+		for _, ev := range cgm.db {
+			cgm.reaper(ev.value)
 		}
 	}
 }

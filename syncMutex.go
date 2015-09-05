@@ -181,12 +181,18 @@ func (cgm *syncMutexMap) run() {
 	} else if duration < time.Second {
 		duration = time.Minute
 	}
-	for {
+	active := true
+	for active {
 		select {
 		case <-time.After(duration):
 			cgm.GC()
 		case <-cgm.halt:
-			break
+			active = false
+		}
+	}
+	if cgm.reaper != nil {
+		for _, ev := range cgm.db {
+			cgm.reaper(ev.value)
 		}
 	}
 }

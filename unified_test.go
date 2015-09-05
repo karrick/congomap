@@ -431,3 +431,46 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
 }
+
+func TestReaperInvokedDuringHalt(t *testing.T) {
+	expected := 42
+	var invoked bool
+
+	var which string
+
+	reaper := func(value interface{}) {
+		invoked = true
+		if v, ok := value.(int); !ok || v != expected {
+			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
+		}
+	}
+
+	cgm, _ := NewChannelMap(Reaper(reaper))
+	which = "channel"
+	cgm.Store("hit", 42)
+	cgm.Halt()
+	time.Sleep(100 * time.Millisecond) // race condition
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
+	which = "sync-atomic"
+	cgm.Store("hit", 42)
+	cgm.Halt()
+	time.Sleep(100 * time.Millisecond) // race condition
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncMutexMap(Reaper(reaper))
+	which = "sync-mutex"
+	cgm.Store("hit", 42)
+	cgm.Halt()
+	time.Sleep(100 * time.Millisecond) // race condition
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+}

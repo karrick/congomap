@@ -187,12 +187,19 @@ func (cgm *syncAtomicMap) run() {
 	} else if duration < time.Second {
 		duration = time.Minute
 	}
-	for {
+	active := true
+	for active {
 		select {
 		case <-time.After(duration):
 			cgm.GC()
 		case <-cgm.halt:
-			break
+			active = false
+		}
+	}
+	if cgm.reaper != nil {
+		m1 := cgm.db.Load().(map[string]expiringValue) // load current value of the data structure
+		for _, ev := range m1 {
+			cgm.reaper(ev.value)
 		}
 	}
 }
