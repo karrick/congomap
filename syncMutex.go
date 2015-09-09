@@ -162,7 +162,7 @@ func (cgm *syncMutexMap) Pairs() <-chan *Pair {
 	pairs := make(chan *Pair)
 	go func(pairs chan<- *Pair) {
 		for k, v := range cgm.db {
-			pairs <- &Pair{k, v}
+			pairs <- &Pair{k, v.value}
 		}
 		close(pairs)
 	}(pairs)

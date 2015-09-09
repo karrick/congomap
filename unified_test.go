@@ -341,6 +341,30 @@ func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 ////////////////////////////////////////
+// Pairs()
+
+func TestPairs(t *testing.T) {
+	test := func(t *testing.T, cgm Congomap, which string) {
+		cgm.Store("first", "Clark")
+		cgm.Store("last", "Kent")
+		for pair := range cgm.Pairs() {
+			if _, ok := pair.Value.(string); !ok {
+				t.Errorf("Actual: %#v; Expected: %#v", ok, true)
+			}
+		}
+	}
+
+	cgm, _ := NewSyncAtomicMap()
+	test(t, cgm, "sync-atomic")
+
+	cgm, _ = NewSyncMutexMap()
+	test(t, cgm, "sync-mutex")
+
+	cgm, _ = NewChannelMap()
+	test(t, cgm, "channel")
+}
+
+////////////////////////////////////////
 // Reaper()
 
 func TestReaperInvokedDuringDelete(t *testing.T) {

@@ -170,7 +170,7 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 		now := time.Now().UnixNano()
 		for k, v := range cgm.db {
 			if !cgm.ttl || (v.expiry > now) {
-				pairs <- &Pair{k, v}
+				pairs <- &Pair{k, v.value}
 			}
 		}
 		close(pairs)
