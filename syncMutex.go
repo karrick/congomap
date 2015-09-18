@@ -169,11 +169,15 @@ func (cgm *syncMutexMap) Pairs() <-chan *Pair {
 	return pairs
 }
 
+// Close releases resources used by the Congomap.
+func (cgm *syncMutexMap) Close() {
+	cgm.halt <- struct{}{}
+}
+
 // Halt releases resources used by the Congomap.
 func (cgm *syncMutexMap) Halt() {
 	cgm.halt <- struct{}{}
 }
-
 func (cgm *syncMutexMap) run() {
 	duration := 5 * cgm.duration
 	if !cgm.ttl {

@@ -2,6 +2,7 @@ package congomap
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -54,15 +55,15 @@ func loadNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadNoTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap()
 	loadNoTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap()
 	loadNoTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap()
 	loadNoTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
@@ -74,15 +75,15 @@ func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadBeforeTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
 	loadBeforeTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Minute))
 	loadBeforeTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(TTL(time.Minute))
 	loadBeforeTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
@@ -95,15 +96,15 @@ func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
 	loadAfterTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond))
 	loadAfterTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(TTL(time.Nanosecond))
 	loadAfterTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 ////////////////////////////////////////
@@ -144,15 +145,15 @@ func loadStoreValueNil(t *testing.T, cgm Congomap, which, key string) {
 func TestLoadStoreNoLookupNoTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap()
 	loadStoreNoLookupNoTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap()
 	loadStoreNoLookupNoTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap()
 	loadStoreNoLookupNoTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
@@ -166,15 +167,15 @@ func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreFailingLookupNoTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreFailingLookupNoTTL(t *testing.T, cgm Congomap, which string) {
@@ -188,15 +189,15 @@ func loadStoreFailingLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreLookupNoTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
@@ -210,15 +211,15 @@ func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreNoLookupBeforeTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
@@ -232,15 +233,15 @@ func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreFailingLookupBeforeTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
@@ -254,15 +255,15 @@ func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreLookupBeforeTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
@@ -276,15 +277,15 @@ func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreNoLookupAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
@@ -299,15 +300,15 @@ func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreFailingLookupAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
@@ -322,15 +323,15 @@ func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreLookupAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "sync-mutex")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "sync-atomic")
-	cgm.Halt()
+	cgm.Close()
 
 	cgm, _ = NewChannelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "channel")
-	cgm.Halt()
+	cgm.Close()
 }
 
 func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
@@ -384,7 +385,7 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 	which = "channel"
 	cgm.Store("hit", 42)
 	cgm.Delete("hit")
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
@@ -394,7 +395,7 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 	which = "sync-atomic"
 	cgm.Store("hit", 42)
 	cgm.Delete("hit")
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
@@ -404,7 +405,7 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 	which = "sync-mutex"
 	cgm.Store("hit", 42)
 	cgm.Delete("hit")
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
@@ -428,7 +429,7 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	cgm.GC()
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
@@ -439,7 +440,7 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	cgm.GC()
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
@@ -450,51 +451,43 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	cgm.GC()
-	cgm.Halt()
+	cgm.Close()
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
 }
 
-func TestReaperInvokedDuringHalt(t *testing.T) {
+func TestReaperInvokedDuringClose(t *testing.T) {
 	expected := 42
-	var invoked bool
+	var wg sync.WaitGroup
 
 	var which string
 
 	reaper := func(value interface{}) {
-		invoked = true
 		if v, ok := value.(int); !ok || v != expected {
 			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
 		}
+		wg.Done()
 	}
 
+	wg.Add(1)
 	cgm, _ := NewChannelMap(Reaper(reaper))
 	which = "channel"
 	cgm.Store("hit", 42)
-	cgm.Halt()
-	time.Sleep(100 * time.Millisecond) // race condition
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	cgm.Close()
+	wg.Wait()
 
-	invoked = false
+	wg.Add(1)
 	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
 	which = "sync-atomic"
 	cgm.Store("hit", 42)
-	cgm.Halt()
-	time.Sleep(100 * time.Millisecond) // race condition
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	cgm.Close()
+	wg.Wait()
 
-	invoked = false
+	wg.Add(1)
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
 	which = "sync-mutex"
 	cgm.Store("hit", 42)
-	cgm.Halt()
-	time.Sleep(100 * time.Millisecond) // race condition
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	cgm.Close()
+	wg.Wait()
 }

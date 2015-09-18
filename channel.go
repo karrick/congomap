@@ -178,6 +178,11 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 	return pairs
 }
 
+// Close releases resources used by the Congomap.
+func (cgm *channelMap) Close() {
+	cgm.halt <- struct{}{}
+}
+
 // Halt releases resources used by the Congomap.
 func (cgm *channelMap) Halt() {
 	cgm.halt <- struct{}{}
