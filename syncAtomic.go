@@ -159,7 +159,6 @@ func (cgm *syncAtomicMap) Keys() []string {
 // be used until the returned channel is closed.
 func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 	cgm.lock.Lock()
-	defer cgm.lock.Unlock()
 
 	pairs := make(chan *Pair)
 	go func(pairs chan<- *Pair) {
@@ -171,6 +170,7 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 			}
 		}
 		close(pairs)
+		cgm.lock.Unlock()
 	}(pairs)
 	return pairs
 }

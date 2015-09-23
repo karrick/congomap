@@ -157,14 +157,17 @@ func (cgm *syncMutexMap) Keys() (keys []string) {
 // be used until the returned channel is closed.
 func (cgm *syncMutexMap) Pairs() <-chan *Pair {
 	cgm.lock.RLock()
-	defer cgm.lock.RUnlock()
 
 	pairs := make(chan *Pair)
 	go func(pairs chan<- *Pair) {
+		now := time.Now().UnixNano()
 		for k, v := range cgm.db {
-			pairs <- &Pair{k, v.value}
+			if !cgm.ttl || (v.expiry > now) {
+				pairs <- &Pair{k, v.value}
+			}
 		}
 		close(pairs)
+		cgm.lock.RUnlock()
 	}(pairs)
 	return pairs
 }
