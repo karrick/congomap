@@ -179,8 +179,9 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 }
 
 // Close releases resources used by the Congomap.
-func (cgm *channelMap) Close() {
+func (cgm *channelMap) Close() error {
 	cgm.halt <- struct{}{}
+	return nil
 }
 
 // Halt releases resources used by the Congomap.

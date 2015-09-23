@@ -176,8 +176,9 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 }
 
 // Close releases resources used by the Congomap.
-func (cgm *syncAtomicMap) Close() {
+func (cgm *syncAtomicMap) Close() error {
 	cgm.halt <- struct{}{}
+	return nil
 }
 
 // Halt releases resources used by the Congomap.

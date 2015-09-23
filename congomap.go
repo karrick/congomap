@@ -6,7 +6,7 @@ import (
 
 // Congomap objects are useful when you need a concurrent go map.
 type Congomap interface {
-	Close()
+	Close() error
 	Delete(string)
 	GC()
 	Halt()
