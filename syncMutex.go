@@ -78,7 +78,7 @@ func (cgm *syncMutexMap) GC() {
 	if cgm.ttl {
 		cgm.lock.Lock()
 		now := time.Now().UnixNano()
-		keysToRemove := make([]string, 0)
+		var keysToRemove []string
 		for key, ev := range cgm.db {
 			if ev.expiry < now {
 				keysToRemove = append(keysToRemove, key)

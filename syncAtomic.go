@@ -146,7 +146,7 @@ func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 
 // Keys returns an array of key values stored in the map.
 func (cgm *syncAtomicMap) Keys() []string {
-	keys := make([]string, 0)
+	var keys []string
 	m1 := cgm.db.Load().(map[string]expiringValue) // load current value of the data structure
 	for k := range m1 {
 		keys = append(keys, k)
