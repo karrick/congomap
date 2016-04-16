@@ -7,6 +7,11 @@ import (
 	"unsafe"
 )
 
+// TODO
+// move keys and values into same cache line for better speed
+// might be able to eliminate stored type if implement logic atomic.Value using CAS
+// AND rather than MOD (30x speed improvement)
+
 type lockFreeHashConfig struct {
 	size uint64
 }
@@ -24,6 +29,7 @@ type lockFreeHashBasic struct {
 	count  int64
 	size   uint64
 	keys   []interface{} // nil means no key; cannot use empty string for no key because then client could never have empty string as a key
+	hashes []uint64
 	values []atomic.Value
 }
 
@@ -40,6 +46,7 @@ func NewLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHashBasic, e
 	lfh := &lockFreeHashBasic{
 		size:   lfhc.size,
 		keys:   make([]interface{}, lfhc.size),
+		hashes: make([]uint64, lfhc.size),
 		values: make([]atomic.Value, lfhc.size),
 	}
 	return lfh, nil
@@ -53,6 +60,14 @@ func (lfh *lockFreeHashBasic) Size() uint64 {
 	return atomic.AddUint64(&lfh.size, 0)
 }
 
+func (lfh *lockFreeHashBasic) getHash(index uint64) uint64 {
+	return lfh.hashes[index]
+}
+
+func (lfh *lockFreeHashBasic) setHash(index uint64, hash uint64) {
+	lfh.hashes[index] = hash
+}
+
 func (lfh *lockFreeHashBasic) getKey(index uint64) (string, bool) {
 	if key, ok := lfh.keys[index].(string); ok {
 		return key, true
@@ -64,31 +79,31 @@ func (lfh *lockFreeHashBasic) setKey(index uint64, key string) {
 	lfh.keys[index] = key
 }
 
-type stored struct {
+type sv struct {
 	ptr                        unsafe.Pointer
 	prime, sentinel, tombstone bool
 }
 
 func (lfh *lockFreeHashBasic) setValue(index uint64, value interface{}) {
-	lfh.values[index].Store(stored{ptr: unsafe.Pointer(&value)})
+	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value)})
 }
 
 func (lfh *lockFreeHashBasic) setValuePrime(index uint64, value interface{}) {
 	// ??? not sure how deal with present value
-	lfh.values[index].Store(stored{ptr: unsafe.Pointer(&value), prime: true})
+	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value), prime: true})
 }
 
 func (lfh *lockFreeHashBasic) setValueSentinel(index uint64) {
-	lfh.values[index].Store(stored{sentinel: true})
+	lfh.values[index].Store(sv{sentinel: true})
 }
 
 func (lfh *lockFreeHashBasic) setValueTombstone(index uint64) {
-	lfh.values[index].Store(stored{tombstone: true})
+	lfh.values[index].Store(sv{tombstone: true})
 }
 
 func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
 	maybeValue := lfh.values[index].Load()
-	if value, ok := maybeValue.(stored); ok {
+	if value, ok := maybeValue.(sv); ok {
 		if value.tombstone {
 			return nil, false // key has been deleted but not released
 		} else if value.prime {
@@ -105,12 +120,13 @@ func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
 func (lfh *lockFreeHashBasic) Delete(key string) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
-	index := hasher.Sum64()
+	h := hasher.Sum64()
+	index := h
 
 	for i := uint64(0); i < lfh.size; i++ {
 		offset := (index + i) & (lfh.size - 1)
 		if k, ok := lfh.getKey(offset); ok {
-			if k == key {
+			if memo := lfh.getHash(offset); h == memo && k == key {
 				fmt.Printf("key tombstone: %d\n", offset)
 				lfh.setValueTombstone(offset)
 				return
@@ -137,11 +153,12 @@ func (lfh *lockFreeHashBasic) Load(key string) (interface{}, bool) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
+	h := index
 	for i := uint64(0); i < lfh.size; i++ {
 		offset := (index + i) & (lfh.size - 1)
-		if k, ok := lfh.getKey(offset); ok && k == key {
-			if value, ok := lfh.getValue(offset); ok {
-				return value, true
+		if k, ok := lfh.getKey(offset); ok {
+			if memo := lfh.getHash(offset); h == memo && k == key {
+				return lfh.getValue(offset)
 			}
 		}
 	}
@@ -152,17 +169,19 @@ func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
+	h := index
 
 	for i := uint64(0); i < lfh.size; i++ {
 		offset := (index + i) & (lfh.size - 1)
 		if k, ok := lfh.getKey(offset); ok {
-			if k == key {
+			if memo := lfh.getHash(offset); h == memo && k == key {
 				fmt.Printf("key value update: %d\n", offset)
 				lfh.setValue(offset, value)
 				return
 			}
 		} else {
 			fmt.Printf("key value new: %d\n", offset)
+			lfh.setHash(offset, h)
 			lfh.setKey(offset, key)
 			lfh.setValue(offset, value)
 
