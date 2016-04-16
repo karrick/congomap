@@ -70,7 +70,7 @@ func (lfh *lockFreeHash) getValue(index uint64) (interface{}, bool) {
 		} else if value.prime {
 			// ???
 		} else if value.sentinel {
-			// resolve by asking next table
+			// resolve by asking new table
 		} else {
 			return *(*interface{})(value.ptr), true
 		}
@@ -90,6 +90,8 @@ func (lfh *lockFreeHash) setValuePrime(index uint64, value interface{}) {
 
 func (lfh *lockFreeHash) setValueSentinel(index uint64) {
 	// fmt.Printf("key sentinel: %d\n", index)
+
+	// TODO: we don't need to CAS here, can be blind overwrite
 	lfh.values[index].Store(sv{sentinel: true})
 }
 
