@@ -8,12 +8,6 @@ import (
 	"unsafe"
 )
 
-type LockFreeMap struct {
-}
-
-func NewLockFreeMap(setters ...Setter) (Contgomap, error) {
-}
-
 // TODO
 // move keys and values into same cache line for better speed
 // might be able to eliminate stored type if implement logic atomic.Value using CAS
@@ -22,7 +16,8 @@ type lockFreeHashConfig struct {
 	size uint64
 }
 
-const defaultInitialSize = 32
+// const defaultInitialSize = 32 // ideal initial size
+const defaultInitialSize = 128 // for debugging until can grow
 
 type LockFreeHashConfigurator func(*lockFreeHashConfig) error
 
@@ -35,9 +30,7 @@ type lockFreeHash struct {
 }
 
 func newLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHash, error) {
-	lfhc := &lockFreeHashConfig{
-		size: defaultInitialSize,
-	}
+	lfhc := &lockFreeHashConfig{size: defaultInitialSize}
 	for _, setter := range setters {
 		if err := setter(lfhc); err != nil {
 			return nil, err
@@ -57,14 +50,6 @@ func (lfh *lockFreeHash) Count() uint64 {
 	return uint64(atomic.AddInt64(&lfh.count, 0))
 }
 
-func (lfh *lockFreeHash) getHash(index uint64) uint64 {
-	return lfh.hashes[index]
-}
-
-func (lfh *lockFreeHash) setHash(index uint64, hash uint64) {
-	lfh.hashes[index] = hash
-}
-
 func (lfh *lockFreeHash) getKey(index uint64) (string, bool) {
 	if key, ok := lfh.keys[index].(string); ok {
 		return key, true
@@ -72,31 +57,9 @@ func (lfh *lockFreeHash) getKey(index uint64) (string, bool) {
 	return "", false
 }
 
-func (lfh *lockFreeHash) setKey(index uint64, key string) {
-	lfh.keys[index] = key
-}
-
 type sv struct {
 	ptr                        unsafe.Pointer
 	prime, sentinel, tombstone bool
-}
-
-func (lfh *lockFreeHash) setValue(index uint64, value interface{}) {
-	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value)})
-}
-
-func (lfh *lockFreeHash) setValuePrime(index uint64, value interface{}) {
-	// ??? not sure how deal with present value
-	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value), prime: true})
-}
-
-func (lfh *lockFreeHash) setValueSentinel(index uint64) {
-	lfh.values[index].Store(sv{sentinel: true})
-}
-
-func (lfh *lockFreeHash) setValueTombstone(index uint64) {
-	// fmt.Printf("key tombstone: %d\n", index)
-	lfh.values[index].Store(sv{tombstone: true})
 }
 
 func (lfh *lockFreeHash) getValue(index uint64) (interface{}, bool) {
@@ -113,6 +76,26 @@ func (lfh *lockFreeHash) getValue(index uint64) (interface{}, bool) {
 		}
 	}
 	return nil, false // key was never set in this table
+}
+
+func (lfh *lockFreeHash) setValue(index uint64, value interface{}) {
+	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value)})
+}
+
+func (lfh *lockFreeHash) setValuePrime(index uint64, value interface{}) {
+	// fmt.Printf("key prime: %d\n", index)
+	// ??? not sure how deal with present value
+	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value), prime: true})
+}
+
+func (lfh *lockFreeHash) setValueSentinel(index uint64) {
+	// fmt.Printf("key sentinel: %d\n", index)
+	lfh.values[index].Store(sv{sentinel: true})
+}
+
+func (lfh *lockFreeHash) setValueTombstone(index uint64) {
+	// fmt.Printf("key tombstone: %d\n", index)
+	lfh.values[index].Store(sv{tombstone: true})
 }
 
 // WARNING: not concurrency safe; temp debugging function
@@ -142,7 +125,7 @@ func (lfh *lockFreeHash) Delete(key string) {
 		if k, ok = lfh.getKey(index); !ok {
 			return
 		}
-		if memo := lfh.getHash(index); hash == memo && k == key {
+		if memo := lfh.hashes[index]; hash == memo && k == key {
 			lfh.setValueTombstone(index)
 			// TODO might need to percolate up if sentinel or prime is there
 			return
@@ -164,7 +147,7 @@ func (lfh *lockFreeHash) Load(key string) (interface{}, bool) {
 		if k, ok = lfh.getKey(index); !ok {
 			return nil, false
 		}
-		if memo := lfh.getHash(index); hash == memo && k == key {
+		if memo := lfh.hashes[index]; hash == memo && k == key {
 			return lfh.getValue(index)
 		}
 		index++
@@ -185,19 +168,19 @@ func (lfh *lockFreeHash) Store(key string, value interface{}) {
 		if k, ok = lfh.getKey(index); !ok {
 			// found a place to store the pair
 			// fmt.Printf("key value new: %d\n", index)
-			lfh.setHash(index, hash)
-			lfh.setKey(index, key)
+			lfh.hashes[index] = hash
+			lfh.keys[index] = key
 			lfh.setValue(index, value)
 
-			newCount := uint64(atomic.AddInt64(&lfh.count, 1))
-			_ = newCount // we will need this below...
+			// FIXME: race condition might increment count twice
 
-			if distance<<4 > lfh.size || newCount<<2 > lfh.size {
+			count := uint64(atomic.AddInt64(&lfh.count, 1))
+			if count<<1 > lfh.size || distance<<4 > lfh.size {
 				lfh.grow()
 			}
 			return
 		}
-		if memo := lfh.getHash(index); hash == memo && k == key {
+		if memo := lfh.hashes[index]; hash == memo && k == key {
 			// update value at this index
 			// fmt.Printf("key value update: %d\n", index)
 			lfh.setValue(index, value)
