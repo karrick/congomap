@@ -4,13 +4,19 @@ import (
 	"fmt"
 	"hash/fnv"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
+
+type LockFreeMap struct {
+}
+
+func NewLockFreeMap(setters ...Setter) (Contgomap, error) {
+}
 
 // TODO
 // move keys and values into same cache line for better speed
 // might be able to eliminate stored type if implement logic atomic.Value using CAS
-// AND rather than MOD (30x speed improvement)
 
 type lockFreeHashConfig struct {
 	size uint64
@@ -20,12 +26,7 @@ const defaultInitialSize = 32
 
 type LockFreeHashConfigurator func(*lockFreeHashConfig) error
 
-// // ??? basically a chain of simple lock hashes, with a head pointer
-// type LockFreeHash struct {
-// 	bunch []*lockFreeHashBasic
-// }
-
-type lockFreeHashBasic struct {
+type lockFreeHash struct {
 	count  int64
 	size   uint64
 	keys   []interface{} // nil means no key; cannot use empty string for no key because then client could never have empty string as a key
@@ -33,7 +34,7 @@ type lockFreeHashBasic struct {
 	values []atomic.Value
 }
 
-func NewLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHashBasic, error) {
+func newLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHash, error) {
 	lfhc := &lockFreeHashConfig{
 		size: defaultInitialSize,
 	}
@@ -43,7 +44,7 @@ func NewLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHashBasic, e
 		}
 	}
 	// TODO: if lfhc.size not power of 2, round up to next power of 2
-	lfh := &lockFreeHashBasic{
+	lfh := &lockFreeHash{
 		size:   lfhc.size,
 		keys:   make([]interface{}, lfhc.size),
 		hashes: make([]uint64, lfhc.size),
@@ -52,26 +53,26 @@ func NewLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHashBasic, e
 	return lfh, nil
 }
 
-func (lfh *lockFreeHashBasic) Count() uint64 {
+func (lfh *lockFreeHash) Count() uint64 {
 	return uint64(atomic.AddInt64(&lfh.count, 0))
 }
 
-func (lfh *lockFreeHashBasic) getHash(index uint64) uint64 {
+func (lfh *lockFreeHash) getHash(index uint64) uint64 {
 	return lfh.hashes[index]
 }
 
-func (lfh *lockFreeHashBasic) setHash(index uint64, hash uint64) {
+func (lfh *lockFreeHash) setHash(index uint64, hash uint64) {
 	lfh.hashes[index] = hash
 }
 
-func (lfh *lockFreeHashBasic) getKey(index uint64) (string, bool) {
+func (lfh *lockFreeHash) getKey(index uint64) (string, bool) {
 	if key, ok := lfh.keys[index].(string); ok {
 		return key, true
 	}
 	return "", false
 }
 
-func (lfh *lockFreeHashBasic) setKey(index uint64, key string) {
+func (lfh *lockFreeHash) setKey(index uint64, key string) {
 	lfh.keys[index] = key
 }
 
@@ -80,25 +81,25 @@ type sv struct {
 	prime, sentinel, tombstone bool
 }
 
-func (lfh *lockFreeHashBasic) setValue(index uint64, value interface{}) {
+func (lfh *lockFreeHash) setValue(index uint64, value interface{}) {
 	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value)})
 }
 
-func (lfh *lockFreeHashBasic) setValuePrime(index uint64, value interface{}) {
+func (lfh *lockFreeHash) setValuePrime(index uint64, value interface{}) {
 	// ??? not sure how deal with present value
 	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value), prime: true})
 }
 
-func (lfh *lockFreeHashBasic) setValueSentinel(index uint64) {
+func (lfh *lockFreeHash) setValueSentinel(index uint64) {
 	lfh.values[index].Store(sv{sentinel: true})
 }
 
-func (lfh *lockFreeHashBasic) setValueTombstone(index uint64) {
-	fmt.Printf("key tombstone: %d\n", index)
+func (lfh *lockFreeHash) setValueTombstone(index uint64) {
+	// fmt.Printf("key tombstone: %d\n", index)
 	lfh.values[index].Store(sv{tombstone: true})
 }
 
-func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
+func (lfh *lockFreeHash) getValue(index uint64) (interface{}, bool) {
 	maybeValue := lfh.values[index].Load()
 	if value, ok := maybeValue.(sv); ok {
 		if value.tombstone {
@@ -115,20 +116,20 @@ func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
 }
 
 // WARNING: not concurrency safe; temp debugging function
-func (lfh *lockFreeHashBasic) Dump() map[string]interface{} {
+func (lfh *lockFreeHash) Dump() map[string]interface{} {
 	m := make(map[string]interface{})
 	for i := uint64(0); i < lfh.size; i++ {
 		if key, ok := lfh.getKey(i); ok {
 			if value, ok := lfh.getValue(i); ok {
 				m[key] = value
-				fmt.Printf("index %d; key: %q; value: %#v\n", i, key, value)
+				// fmt.Printf("index %d; key: %q; value: %#v\n", i, key, value)
 			}
 		}
 	}
 	return m
 }
 
-func (lfh *lockFreeHashBasic) Delete(key string) {
+func (lfh *lockFreeHash) Delete(key string) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	hash := hasher.Sum64()
@@ -150,7 +151,7 @@ func (lfh *lockFreeHashBasic) Delete(key string) {
 	}
 }
 
-func (lfh *lockFreeHashBasic) Load(key string) (interface{}, bool) {
+func (lfh *lockFreeHash) Load(key string) (interface{}, bool) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
@@ -170,7 +171,7 @@ func (lfh *lockFreeHashBasic) Load(key string) (interface{}, bool) {
 	}
 }
 
-func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
+func (lfh *lockFreeHash) Store(key string, value interface{}) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
@@ -183,7 +184,7 @@ func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
 		index &= (lfh.size - 1)
 		if k, ok = lfh.getKey(index); !ok {
 			// found a place to store the pair
-			fmt.Printf("key value new: %d\n", index)
+			// fmt.Printf("key value new: %d\n", index)
 			lfh.setHash(index, hash)
 			lfh.setKey(index, key)
 			lfh.setValue(index, value)
@@ -198,7 +199,7 @@ func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
 		}
 		if memo := lfh.getHash(index); hash == memo && k == key {
 			// update value at this index
-			fmt.Printf("key value update: %d\n", index)
+			// fmt.Printf("key value update: %d\n", index)
 			lfh.setValue(index, value)
 			return
 		}
@@ -207,6 +208,67 @@ func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
 	}
 }
 
-func (lfh *lockFreeHashBasic) grow() {
-	fmt.Printf("TODO: implement grow\n")
+func (lfh *lockFreeHash) grow() {
+	// fmt.Printf("TODO: implement grow\n")
+}
+
+func (lfh *lockFreeHash) GC() {
+}
+
+func (lfh *lockFreeHash) LoadStore(key string) (interface{}, error) {
+	return nil, fmt.Errorf("TODO: implement LFH LoadStore")
+}
+
+func (lfh *lockFreeHash) Keys() []string {
+	var keys []string
+	for i := uint64(0); i < lfh.size; i++ {
+		if key, ok := lfh.getKey(i); ok {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+func (lfh *lockFreeHash) Pairs() <-chan *Pair {
+	pairs := make(chan *Pair)
+
+	go func(pairs chan<- *Pair) {
+		// now := time.Now().UnixNano()
+
+		// for i := uint64(0); i < lfh.size; i++ {
+		// 	if key, ok := lfh.getKey(i); ok {
+		// 		if value, ok := lfh.getValue(i); ok {
+		// 			if !cgm.ttl || (v.expiry > now) {
+		// 				pairs <- &Pair{key, v.value}
+		// 			}
+		// 		}
+		// 	}
+		// }
+		close(pairs)
+	}(pairs)
+	return pairs
+}
+
+func (lfh *lockFreeHash) Close() error {
+	return nil
+}
+
+func (lfh *lockFreeHash) Halt() {
+}
+
+func (lfh *lockFreeHash) Lookup(lookup func(string) (interface{}, error)) error {
+	return nil
+}
+
+func (lfh *lockFreeHash) Reaper(reaper func(interface{})) error {
+	return nil
+}
+
+func (cgm *lockFreeHash) TTL(duration time.Duration) error {
+	if duration <= 0 {
+		return ErrInvalidDuration(duration)
+	}
+	// cgm.duration = duration
+	// cgm.ttl = true
+	return nil
 }

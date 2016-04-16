@@ -6,14 +6,14 @@ import (
 )
 
 func TestLFHLoad(t *testing.T) {
-	lfh, err := NewLockFreeHash()
+	lfh, err := newLockFreeHash()
 	if err != nil {
 		t.Fatal(err)
 	}
 	expected := "some value"
 	lfh.Store("key", expected)
 
-	fmt.Printf("after store: %v\n", lfh.Dump())
+	// fmt.Printf("after store: %v\n", lfh.Dump())
 
 	retrieved, ok := lfh.Load("key")
 	if !ok {
@@ -29,7 +29,7 @@ func TestLFHLoad(t *testing.T) {
 }
 
 func TestLFHDelete(t *testing.T) {
-	lfh, err := NewLockFreeHash()
+	lfh, err := newLockFreeHash()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestLFHDelete(t *testing.T) {
 }
 
 func TestLFHStore(t *testing.T) {
-	lfh, err := NewLockFreeHash()
+	lfh, err := newLockFreeHash()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,13 +56,13 @@ func TestLFHStore(t *testing.T) {
 	lfh.Store("key1", "superman")
 	lfh.Store("key1", "wonder woman")
 	lfh.Store("key2", "batman")
-	fmt.Printf("size: %d; count: %d; %v\n", lfh.size, lfh.Count(), lfh.Dump())
+	// fmt.Printf("size: %d; count: %d; %v\n", lfh.size, lfh.Count(), lfh.Dump())
 }
 
 func TestLFHStoreExactlyAvailable(t *testing.T) {
 	t.Skip("growing hash not implemented")
 
-	lfh, err := NewLockFreeHash()
+	lfh, err := newLockFreeHash()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,13 +71,13 @@ func TestLFHStoreExactlyAvailable(t *testing.T) {
 	for i := uint64(0); i < limit; i++ {
 		lfh.Store(fmt.Sprintf("key%d", i), fmt.Sprintf("superman%d", i))
 	}
-	fmt.Printf("map: %v\n", lfh.Dump())
+	// fmt.Printf("map: %v\n", lfh.Dump())
 }
 
 func TestLFHStoreMoreThanAvailable(t *testing.T) {
 	t.Skip("growing hash not implemented")
 
-	lfh, err := NewLockFreeHash()
+	lfh, err := newLockFreeHash()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,5 +86,5 @@ func TestLFHStoreMoreThanAvailable(t *testing.T) {
 	for i := uint64(0); i < limit; i++ {
 		lfh.Store(fmt.Sprintf("key%d", i), fmt.Sprintf("superman%d", i))
 	}
-	fmt.Printf("map: %v\n", lfh.Dump())
+	// fmt.Printf("map: %v\n", lfh.Dump())
 }
