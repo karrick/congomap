@@ -158,14 +158,6 @@ func (lfh *lockFreeHashBasic) Load(key string) (interface{}, bool) {
 
 	var k string
 	var ok bool
-	// for i := uint64(0); i < lfh.size; i++ {
-	// 	offset := (index + i) & (lfh.size - 1)
-	// 	if k, ok := lfh.getKey(offset); ok {
-	// 		if memo := lfh.getHash(offset); hash == memo && k == key {
-	// 			return lfh.getValue(offset)
-	// 		}
-	// 	}
-	// }
 	for {
 		index &= (lfh.size - 1)
 		if k, ok = lfh.getKey(index); !ok {
@@ -182,34 +174,39 @@ func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
-	h := index
+	hash := index
 
-	for i := uint64(0); i < lfh.size; i++ {
-		offset := (index + i) & (lfh.size - 1)
-		if k, ok := lfh.getKey(offset); ok {
-			if memo := lfh.getHash(offset); h == memo && k == key {
-				fmt.Printf("key value update: %d\n", offset)
-				lfh.setValue(offset, value)
-				return
-			}
-		} else {
-			fmt.Printf("key value new: %d\n", offset)
-			lfh.setHash(offset, h)
-			lfh.setKey(offset, key)
-			lfh.setValue(offset, value)
+	var k string
+	var ok bool
+	var distance uint64
+	for {
+		index &= (lfh.size - 1)
+		if k, ok = lfh.getKey(index); !ok {
+			// found a place to store the pair
+			fmt.Printf("key value new: %d\n", index)
+			lfh.setHash(index, hash)
+			lfh.setKey(index, key)
+			lfh.setValue(index, value)
 
-			size := atomic.AddUint64(&lfh.size, 0)
-			newCount := atomic.AddInt64(&lfh.count, 1)
+			newCount := uint64(atomic.AddInt64(&lfh.count, 1))
 			_ = newCount // we will need this below...
 
-			// size is always power of 2
-			if i<<4 < size {
-				// don't need to grow yet
-				return
+			if distance<<4 > lfh.size || newCount<<2 > lfh.size {
+				lfh.grow()
 			}
-			break // trigger a grow action
+			return
 		}
+		if memo := lfh.getHash(index); hash == memo && k == key {
+			// update value at this index
+			fmt.Printf("key value update: %d\n", index)
+			lfh.setValue(index, value)
+			return
+		}
+		index++
+		distance++
 	}
+}
 
-	panic(fmt.Errorf("TODO: grow"))
+func (lfh *lockFreeHashBasic) grow() {
+	fmt.Printf("TODO: implement grow\n")
 }
