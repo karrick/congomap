@@ -64,6 +64,10 @@ func TestLoadNoTTL(t *testing.T) {
 	cgm, _ = NewChannelMap()
 	loadNoTTL(t, cgm, "channel")
 	cgm.Close()
+
+	cgm, _ = newLockFreeHash()
+	loadNoTTL(t, cgm, "lfh")
+	cgm.Close()
 }
 
 func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {

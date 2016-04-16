@@ -170,6 +170,12 @@ func BenchmarkSyncMutexMapLoadStore(b *testing.B) {
 	parallelLoadStorers(b, cm)
 }
 
+func BenchmarkLockFreeHashLoad(b *testing.B) {
+	cm, _ := newLockFreeHash()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
+}
+
 func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
 	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
 	cm, _ := NewSyncMutexMap(Lookup(lookup))
