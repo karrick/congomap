@@ -56,7 +56,7 @@ func TestLFHStore(t *testing.T) {
 	lfh.Store("key1", "superman")
 	lfh.Store("key1", "wonder woman")
 	lfh.Store("key2", "batman")
-	fmt.Printf("size: %d; count: %d; %v\n", lfh.Size(), lfh.Count(), lfh.Dump())
+	fmt.Printf("size: %d; count: %d; %v\n", lfh.size, lfh.Count(), lfh.Dump())
 }
 
 func TestLFHStoreExactlyAvailable(t *testing.T) {
@@ -67,7 +67,7 @@ func TestLFHStoreExactlyAvailable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	limit := lfh.Size()
+	limit := lfh.size
 	for i := uint64(0); i < limit; i++ {
 		lfh.Store(fmt.Sprintf("key%d", i), fmt.Sprintf("superman%d", i))
 	}
@@ -82,7 +82,7 @@ func TestLFHStoreMoreThanAvailable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	limit := lfh.Size() * 2
+	limit := lfh.size * 2
 	for i := uint64(0); i < limit; i++ {
 		lfh.Store(fmt.Sprintf("key%d", i), fmt.Sprintf("superman%d", i))
 	}

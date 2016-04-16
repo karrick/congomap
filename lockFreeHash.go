@@ -56,10 +56,6 @@ func (lfh *lockFreeHashBasic) Count() uint64 {
 	return uint64(atomic.AddInt64(&lfh.count, 0))
 }
 
-func (lfh *lockFreeHashBasic) Size() uint64 {
-	return atomic.AddUint64(&lfh.size, 0)
-}
-
 func (lfh *lockFreeHashBasic) getHash(index uint64) uint64 {
 	return lfh.hashes[index]
 }
@@ -98,6 +94,7 @@ func (lfh *lockFreeHashBasic) setValueSentinel(index uint64) {
 }
 
 func (lfh *lockFreeHashBasic) setValueTombstone(index uint64) {
+	fmt.Printf("key tombstone: %d\n", index)
 	lfh.values[index].Store(sv{tombstone: true})
 }
 
@@ -120,18 +117,33 @@ func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
 func (lfh *lockFreeHashBasic) Delete(key string) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
-	h := hasher.Sum64()
-	index := h
+	hash := hasher.Sum64()
+	index := hash
 
-	for i := uint64(0); i < lfh.size; i++ {
-		offset := (index + i) & (lfh.size - 1)
-		if k, ok := lfh.getKey(offset); ok {
-			if memo := lfh.getHash(offset); h == memo && k == key {
-				fmt.Printf("key tombstone: %d\n", offset)
-				lfh.setValueTombstone(offset)
-				return
-			}
+	// for i := uint64(0); i < lfh.size; i++ {
+	// 	offset := (index + i) & (lfh.size - 1)
+	// 	if k, ok := lfh.getKey(offset); ok {
+	// 		if memo := lfh.getHash(offset); hash == memo && k == key {
+	// 			fmt.Printf("key tombstone: %d\n", offset)
+	// 			lfh.setValueTombstone(offset)
+	// 			return
+	// 		}
+	// 	}
+	// }
+
+	var k string
+	var ok bool
+	for {
+		index &= (lfh.size - 1)
+		if k, ok = lfh.getKey(index); !ok {
+			return
 		}
+		if memo := lfh.getHash(index); hash == memo && k == key {
+			lfh.setValueTombstone(index)
+			// TODO might need to percolate up if sentinel or prime is there
+			return
+		}
+		index++
 	}
 }
 
