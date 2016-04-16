@@ -182,6 +182,7 @@ func (cgm *syncMutexMap) Close() error {
 func (cgm *syncMutexMap) Halt() {
 	cgm.halt <- struct{}{}
 }
+
 func (cgm *syncMutexMap) run() {
 	duration := 5 * cgm.duration
 	if !cgm.ttl {
