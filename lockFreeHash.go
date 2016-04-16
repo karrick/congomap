@@ -114,22 +114,25 @@ func (lfh *lockFreeHashBasic) getValue(index uint64) (interface{}, bool) {
 	return nil, false // key was never set in this table
 }
 
+// WARNING: not concurrency safe; temp debugging function
+func (lfh *lockFreeHashBasic) Dump() map[string]interface{} {
+	m := make(map[string]interface{})
+	for i := uint64(0); i < lfh.size; i++ {
+		if key, ok := lfh.getKey(i); ok {
+			if value, ok := lfh.getValue(i); ok {
+				m[key] = value
+				fmt.Printf("index %d; key: %q; value: %#v\n", i, key, value)
+			}
+		}
+	}
+	return m
+}
+
 func (lfh *lockFreeHashBasic) Delete(key string) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	hash := hasher.Sum64()
 	index := hash
-
-	// for i := uint64(0); i < lfh.size; i++ {
-	// 	offset := (index + i) & (lfh.size - 1)
-	// 	if k, ok := lfh.getKey(offset); ok {
-	// 		if memo := lfh.getHash(offset); hash == memo && k == key {
-	// 			fmt.Printf("key tombstone: %d\n", offset)
-	// 			lfh.setValueTombstone(offset)
-	// 			return
-	// 		}
-	// 	}
-	// }
 
 	var k string
 	var ok bool
@@ -147,34 +150,32 @@ func (lfh *lockFreeHashBasic) Delete(key string) {
 	}
 }
 
-// WARNING: not concurrency safe; temp debugging function
-func (lfh *lockFreeHashBasic) Dump() map[string]interface{} {
-	m := make(map[string]interface{})
-	for i := uint64(0); i < lfh.size; i++ {
-		if key, ok := lfh.getKey(i); ok {
-			if value, ok := lfh.getValue(i); ok {
-				m[key] = value
-				fmt.Printf("index %d; key: %q; value: %#v\n", i, key, value)
-			}
-		}
-	}
-	return m
-}
-
 func (lfh *lockFreeHashBasic) Load(key string) (interface{}, bool) {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
 	index := hasher.Sum64()
-	h := index
-	for i := uint64(0); i < lfh.size; i++ {
-		offset := (index + i) & (lfh.size - 1)
-		if k, ok := lfh.getKey(offset); ok {
-			if memo := lfh.getHash(offset); h == memo && k == key {
-				return lfh.getValue(offset)
-			}
+	hash := index
+
+	var k string
+	var ok bool
+	// for i := uint64(0); i < lfh.size; i++ {
+	// 	offset := (index + i) & (lfh.size - 1)
+	// 	if k, ok := lfh.getKey(offset); ok {
+	// 		if memo := lfh.getHash(offset); hash == memo && k == key {
+	// 			return lfh.getValue(offset)
+	// 		}
+	// 	}
+	// }
+	for {
+		index &= (lfh.size - 1)
+		if k, ok = lfh.getKey(index); !ok {
+			return nil, false
 		}
+		if memo := lfh.getHash(index); hash == memo && k == key {
+			return lfh.getValue(index)
+		}
+		index++
 	}
-	return nil, false
 }
 
 func (lfh *lockFreeHashBasic) Store(key string, value interface{}) {
