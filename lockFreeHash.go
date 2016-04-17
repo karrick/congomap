@@ -13,7 +13,8 @@ import (
 // might be able to eliminate stored type if implement logic atomic.Value using CAS
 
 type lockFreeHashConfig struct {
-	size uint64
+	hasher func(string) uint64
+	size   uint64
 }
 
 // const defaultInitialSize = 32 // ideal initial size
@@ -27,10 +28,21 @@ type lockFreeHash struct {
 	keys   []interface{} // nil means no key; cannot use empty string for no key because then client could never have empty string as a key
 	hashes []uint64
 	values []atomic.Value
+	hasher func(string) uint64
+}
+
+func Hasher(hasher func(string) uint64) LockFreeHashConfigurator {
+	return func(lfhc *lockFreeHashConfig) error {
+		lfhc.hasher = hasher
+		return nil
+	}
 }
 
 func newLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHash, error) {
-	lfhc := &lockFreeHashConfig{size: defaultInitialSize}
+	lfhc := &lockFreeHashConfig{
+		hasher: enhash,
+		size:   defaultInitialSize,
+	}
 	for _, setter := range setters {
 		if err := setter(lfhc); err != nil {
 			return nil, err
@@ -42,8 +54,15 @@ func newLockFreeHash(setters ...LockFreeHashConfigurator) (*lockFreeHash, error)
 		keys:   make([]interface{}, lfhc.size),
 		hashes: make([]uint64, lfhc.size),
 		values: make([]atomic.Value, lfhc.size),
+		hasher: lfhc.hasher,
 	}
 	return lfh, nil
+}
+
+func enhash(key string) uint64 {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(key))
+	return hasher.Sum64()
 }
 
 func (lfh *lockFreeHash) Count() uint64 {
@@ -79,6 +98,7 @@ func (lfh *lockFreeHash) getValue(index uint64) (interface{}, bool) {
 }
 
 func (lfh *lockFreeHash) setValue(index uint64, value interface{}) {
+	// fmt.Printf("key value update: %d\n", index)
 	lfh.values[index].Store(sv{ptr: unsafe.Pointer(&value)})
 }
 
@@ -115,9 +135,7 @@ func (lfh *lockFreeHash) Dump() map[string]interface{} {
 }
 
 func (lfh *lockFreeHash) Delete(key string) {
-	hasher := fnv.New64a()
-	hasher.Write([]byte(key))
-	hash := hasher.Sum64()
+	hash := lfh.hasher(key)
 	index := hash
 
 	var k string
@@ -137,10 +155,8 @@ func (lfh *lockFreeHash) Delete(key string) {
 }
 
 func (lfh *lockFreeHash) Load(key string) (interface{}, bool) {
-	hasher := fnv.New64a()
-	hasher.Write([]byte(key))
-	index := hasher.Sum64()
-	hash := index
+	hash := lfh.hasher(key)
+	index := hash
 
 	var k string
 	var ok bool
@@ -157,17 +173,15 @@ func (lfh *lockFreeHash) Load(key string) (interface{}, bool) {
 }
 
 func (lfh *lockFreeHash) Store(key string, value interface{}) {
-	hasher := fnv.New64a()
-	hasher.Write([]byte(key))
-	index := hasher.Sum64()
-	hash := index
+	hash := lfh.hasher(key)
+	index := hash
 
 	var k string
-	var ok bool
+	var occupied bool
 	var distance uint64
 	for {
 		index &= (lfh.size - 1)
-		if k, ok = lfh.getKey(index); !ok {
+		if k, occupied = lfh.getKey(index); !occupied {
 			// found a place to store the pair
 			// fmt.Printf("key value new: %d\n", index)
 			lfh.hashes[index] = hash
@@ -175,16 +189,15 @@ func (lfh *lockFreeHash) Store(key string, value interface{}) {
 			lfh.setValue(index, value)
 
 			// FIXME: race condition might increment count twice
-
 			count := uint64(atomic.AddInt64(&lfh.count, 1))
-			if count<<1 > lfh.size || distance<<4 > lfh.size {
+
+			if distance<<4 > lfh.size || count<<2 > lfh.size { // NOTE: Dr. Click uses a constant reprobe limit of 10
 				lfh.grow()
 			}
 			return
 		}
 		if memo := lfh.hashes[index]; hash == memo && k == key {
 			// update value at this index
-			// fmt.Printf("key value update: %d\n", index)
 			lfh.setValue(index, value)
 			return
 		}
