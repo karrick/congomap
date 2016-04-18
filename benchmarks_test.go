@@ -103,6 +103,7 @@ func parallelBench(b *testing.B, cm Congomap, fn func(*testing.PB)) {
 	for i := 0; i < len(states); i++ {
 		cm.Store(randomState(), randomState())
 	}
+	b.SetParallelism(10000)
 	b.RunParallel(fn)
 }
 
@@ -122,13 +123,13 @@ func parallelLoadStorers(b *testing.B, cm Congomap) {
 	})
 }
 
-func BenchmarkChannelMapLoad(b *testing.B) {
+func _BenchmarkChannelMapLoad(b *testing.B) {
 	cm, _ := NewChannelMap()
 	defer cm.Halt()
 	parallelLoaders(b, cm)
 }
 
-func BenchmarkChannelMapLoadStore(b *testing.B) {
+func _BenchmarkChannelMapLoadStore(b *testing.B) {
 	cm, _ := NewChannelMap()
 	defer cm.Halt()
 	parallelLoadStorers(b, cm)
@@ -214,6 +215,34 @@ func _BenchmarkSyncMutexMapManyLoadersLoadStorerPerspective(b *testing.B) {
 	withLoadedCongomap(cm, 20, 1, 1, func() {
 		for i := 0; i < b.N; i++ {
 			r, _ = cm.LoadStore(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
+}
+
+func BenchmarkSyncMutexMapManyLoadersLoadPerspective(b *testing.B) {
+	var r interface{}
+	cm, _ := NewSyncMutexMap()
+	defer cm.Halt()
+
+	withLoadedCongomap(cm, 5000, 20, 0, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.Load(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
+}
+
+func BenchmarkLockFreeMapManyLoadersLoadPerspective(b *testing.B) {
+	var r interface{}
+	cm, _ := newLockFreeHash()
+	defer cm.Halt()
+
+	withLoadedCongomap(cm, 5000, 20, 0, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.Load(randomState())
 		}
 	})
 
