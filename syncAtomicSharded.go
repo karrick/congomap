@@ -127,15 +127,17 @@ func (cgm *syncMutexShardedMap) Store(key string, value interface{}) {
 // map, it calls the lookup function, and sets the value in the map to that returned by the lookup
 // function.
 func (cgm *syncMutexShardedMap) LoadStore(key string) (interface{}, error) {
-	// top-level lock
-	cgm.lock.Lock()
+	cgm.lock.RLock()
 	ev, ok := cgm.db[key]
+	cgm.lock.RUnlock()
+
+	// create entry if we don't have an entry for this key yet
 	if !ok {
-		// create entry if we don't have an entry for this key yet
+		cgm.lock.Lock()
 		ev = &expiringValue{}
 		cgm.db[key] = ev
+		cgm.lock.Unlock()
 	}
-	cgm.lock.Unlock() // WARNING: don't hold the top-level too long
 
 	// key-level lock
 	ev.keylock.Lock()
