@@ -170,6 +170,24 @@ func BenchmarkSyncMutexMapLoadStore(b *testing.B) {
 	parallelLoadStorers(b, cm)
 }
 
+func BenchmarkSyncMutexShardedMapLoad(b *testing.B) {
+	cm, _ := NewSyncMutexShardedMap()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
+}
+
+func BenchmarkSyncMutexShardedMapLoadTTL(b *testing.B) {
+	cm, _ := NewSyncMutexShardedMap(TTL(time.Second))
+	defer cm.Halt()
+	parallelLoaders(b, cm)
+}
+
+func BenchmarkSyncMutexShardedMapLoadStore(b *testing.B) {
+	cm, _ := NewSyncMutexShardedMap()
+	defer cm.Halt()
+	parallelLoadStorers(b, cm)
+}
+
 func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
 	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
 	cm, _ := NewSyncMutexMap(Lookup(lookup))

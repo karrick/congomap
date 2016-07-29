@@ -147,6 +147,10 @@ func TestLoadStoreNoLookupNoTTL(t *testing.T) {
 	loadStoreNoLookupNoTTL(t, cgm, "sync-mutex")
 	cgm.Close()
 
+	cgm, _ = NewSyncMutexShardedMap()
+	loadStoreNoLookupNoTTL(t, cgm, "sync-mutex-sharded")
+	cgm.Close()
+
 	cgm, _ = NewSyncAtomicMap()
 	loadStoreNoLookupNoTTL(t, cgm, "sync-atomic")
 	cgm.Close()
@@ -167,6 +171,10 @@ func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreFailingLookupNoTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "sync-mutex")
+	cgm.Close()
+
+	cgm, _ = NewSyncMutexShardedMap(Lookup(failingLookup))
+	loadStoreFailingLookupNoTTL(t, cgm, "sync-mutex-sharded")
 	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup))
@@ -191,6 +199,10 @@ func TestLoadStoreLookupNoTTL(t *testing.T) {
 	loadStoreLookupNoTTL(t, cgm, "sync-mutex")
 	cgm.Close()
 
+	cgm, _ = NewSyncMutexShardedMap(Lookup(succeedingLookup))
+	loadStoreLookupNoTTL(t, cgm, "sync-mutex-sharded")
+	cgm.Close()
+
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "sync-atomic")
 	cgm.Close()
@@ -211,6 +223,10 @@ func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreNoLookupBeforeTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "sync-mutex")
+	cgm.Close()
+
+	cgm, _ = NewSyncMutexShardedMap(TTL(time.Minute))
+	loadStoreNoLookupBeforeTTL(t, cgm, "sync-mutex-sharded")
 	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Minute))
@@ -235,6 +251,10 @@ func TestLoadStoreFailingLookupBeforeTTL(t *testing.T) {
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-mutex")
 	cgm.Close()
 
+	cgm, _ = NewSyncMutexShardedMap(Lookup(failingLookup), TTL(time.Minute))
+	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-mutex-sharded")
+	cgm.Close()
+
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-atomic")
 	cgm.Close()
@@ -257,6 +277,10 @@ func TestLoadStoreLookupBeforeTTL(t *testing.T) {
 	loadStoreLookupBeforeTTL(t, cgm, "sync-mutex")
 	cgm.Close()
 
+	cgm, _ = NewSyncMutexShardedMap(Lookup(succeedingLookup), TTL(time.Minute))
+	loadStoreLookupBeforeTTL(t, cgm, "sync-mutex-sharded")
+	cgm.Close()
+
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "sync-atomic")
 	cgm.Close()
@@ -277,6 +301,10 @@ func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreNoLookupAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "sync-mutex")
+	cgm.Close()
+
+	cgm, _ = NewSyncMutexShardedMap(TTL(time.Nanosecond))
+	loadStoreNoLookupAfterTTL(t, cgm, "sync-mutex-sharded")
 	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond))
@@ -302,6 +330,10 @@ func TestLoadStoreFailingLookupAfterTTL(t *testing.T) {
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-mutex")
 	cgm.Close()
 
+	cgm, _ = NewSyncMutexShardedMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	loadStoreFailingLookupAfterTTL(t, cgm, "sync-mutex-sharded")
+	cgm.Close()
+
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-atomic")
 	cgm.Close()
@@ -323,6 +355,10 @@ func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 func TestLoadStoreLookupAfterTTL(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "sync-mutex")
+	cgm.Close()
+
+	cgm, _ = NewSyncMutexShardedMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	loadStoreLookupAfterTTL(t, cgm, "sync-mutex-sharded")
 	cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
@@ -360,6 +396,9 @@ func TestPairs(t *testing.T) {
 
 	cgm, _ = NewSyncMutexMap()
 	test(t, cgm, "sync-mutex")
+
+	cgm, _ = NewSyncMutexShardedMap()
+	test(t, cgm, "sync-atomic")
 
 	cgm, _ = NewChannelMap()
 	test(t, cgm, "channel")
@@ -403,6 +442,16 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 	invoked = false
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
 	which = "sync-mutex"
+	cgm.Store("hit", 42)
+	cgm.Delete("hit")
+	cgm.Close()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
+
+	invoked = false
+	cgm, _ = NewSyncMutexShardedMap(Reaper(reaper))
+	which = "sync-mutex-sharded"
 	cgm.Store("hit", 42)
 	cgm.Delete("hit")
 	cgm.Close()
@@ -455,6 +504,17 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
+
+	invoked = false
+	cgm, _ = NewSyncMutexShardedMap(TTL(time.Nanosecond), Reaper(reaper))
+	which = "sync-mutex-sharded"
+	cgm.Store("hit", 42)
+	time.Sleep(time.Millisecond)
+	cgm.GC()
+	cgm.Close()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
 }
 
 func TestReaperInvokedDuringClose(t *testing.T) {
@@ -487,6 +547,13 @@ func TestReaperInvokedDuringClose(t *testing.T) {
 	wg.Add(1)
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
 	which = "sync-mutex"
+	cgm.Store("hit", 42)
+	cgm.Close()
+	wg.Wait()
+
+	wg.Add(1)
+	cgm, _ = NewSyncMutexShardedMap(Reaper(reaper))
+	which = "sync-mutex-sharded"
 	cgm.Store("hit", 42)
 	cgm.Close()
 	wg.Wait()

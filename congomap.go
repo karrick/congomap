@@ -1,6 +1,7 @@
 package congomap
 
 import (
+	"sync"
 	"time"
 )
 
@@ -60,8 +61,10 @@ func TTL(duration time.Duration) Setter {
 }
 
 type expiringValue struct {
-	value  interface{}
-	expiry int64
+	keylock sync.RWMutex
+	value   interface{}
+	expiry  int64
+	present bool
 }
 
 // ErrNoLookupDefined is returned by LoadStore() method when a key is
