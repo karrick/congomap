@@ -109,7 +109,7 @@ func parallelBench(b *testing.B, cm Congomap, fn func(*testing.PB)) {
 func parallelLoaders(b *testing.B, cm Congomap) {
 	parallelBench(b, cm, func(pb *testing.PB) {
 		for pb.Next() {
-			cm.Load(randomState())
+			_, _ = cm.Load(randomState())
 		}
 	})
 }
@@ -117,7 +117,7 @@ func parallelLoaders(b *testing.B, cm Congomap) {
 func parallelLoadStorers(b *testing.B, cm Congomap) {
 	parallelBench(b, cm, func(pb *testing.PB) {
 		for pb.Next() {
-			cm.LoadStore(randomState())
+			_, _ = cm.LoadStore(randomState())
 		}
 	})
 }
