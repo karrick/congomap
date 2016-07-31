@@ -68,7 +68,7 @@ func withLoadedCongomap(cm Congomap, loaders, storers, loadstorers int, fn func(
 	for i := 0; i < loaders; i++ {
 		go func() {
 			for !stop {
-				cm.Load(randomState())
+				_, _ = cm.Load(randomState())
 			}
 			exited <- struct{}{}
 		}()
@@ -84,7 +84,7 @@ func withLoadedCongomap(cm Congomap, loaders, storers, loadstorers int, fn func(
 	for i := 0; i < loadstorers; i++ {
 		go func() {
 			for !stop {
-				cm.LoadStore(randomState())
+				_, _ = cm.LoadStore(randomState())
 			}
 			exited <- struct{}{}
 		}()
