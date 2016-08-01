@@ -76,12 +76,7 @@ func TestLoadNoTTL(t *testing.T) {
 }
 
 func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Minute)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	loadNilFalse(t, cgm, which, "miss")
 	loadValueTrue(t, cgm, which, "hit")
 }
@@ -101,12 +96,7 @@ func TestLoadBeforeTTL(t *testing.T) {
 }
 
 func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Nanosecond)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadNilFalse(t, cgm, which, "miss")
 	loadNilFalse(t, cgm, which, "hit")
@@ -242,12 +232,7 @@ func TestLoadStoreNoLookupBeforeTTL(t *testing.T) {
 }
 
 func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Minute)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
 }
@@ -269,12 +254,7 @@ func TestLoadStoreFailingLookupBeforeTTL(t *testing.T) {
 }
 
 func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Minute)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
 }
@@ -296,12 +276,7 @@ func TestLoadStoreLookupBeforeTTL(t *testing.T) {
 }
 
 func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Minute)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
 }
@@ -323,12 +298,7 @@ func TestLoadStoreNoLookupAfterTTL(t *testing.T) {
 }
 
 func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Nanosecond)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "hit")
@@ -351,12 +321,7 @@ func TestLoadStoreFailingLookupAfterTTL(t *testing.T) {
 }
 
 func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Nanosecond)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreNilErrLookupFailed(t, cgm, which, "hit")
@@ -379,12 +344,7 @@ func TestLoadStoreLookupAfterTTL(t *testing.T) {
 }
 
 func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Nanosecond)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -475,12 +435,7 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 
 	cgm, _ := NewTwoLevelMap(TTL(time.Nanosecond), Reaper(reaper))
 	which = "twoLevel"
-	switch cgm.(type) {
-	case *twoLevelMap:
-		cgm.Store("hit", &ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Nanosecond)})
-	default:
-		cgm.Store("hit", 42)
-	}
+	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	cgm.GC()
 	_ = cgm.Close()

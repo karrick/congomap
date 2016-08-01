@@ -78,11 +78,6 @@ func withLoadedCongomap(cgm Congomap, loaders, storers, loadstorers int, fn func
 			var value interface{}
 			for !stop {
 				value = randomState()
-				switch cgm.(type) {
-				case *twoLevelMap:
-					value = &ExpiringValue{Value: value, Expiry: time.Now().Add(time.Second)}
-				default:
-				}
 				cgm.Store(randomState(), value)
 			}
 			exited <- struct{}{}

@@ -15,9 +15,9 @@ type twoLevelMap struct {
 	lookup func(string) (interface{}, error)
 	reaper func(interface{})
 
-	// ignored, but here because of Congomap interface...
-	ttlDuration time.Duration
+	// if ttlEnabled, and non ExpiringValue given to Store, then this TTL applied to value
 	ttlEnabled  bool
+	ttlDuration time.Duration
 }
 
 // lockedValue is a pointer to a value and the lock that protects it. All access to the value ought
@@ -153,7 +153,11 @@ func (cgm *twoLevelMap) Store(key string, value interface{}) {
 	case *ExpiringValue:
 		newLockedValue.ev = ev
 	default:
-		newLockedValue.ev = &ExpiringValue{Value: value}
+		var expiry time.Time
+		if cgm.ttlEnabled {
+			expiry = time.Now().Add(cgm.ttlDuration)
+		}
+		newLockedValue.ev = &ExpiringValue{Value: value, Expiry: expiry}
 	}
 
 	cgm.dbLock.Lock()
@@ -202,7 +206,11 @@ func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	case *ExpiringValue:
 		lv.ev = ev
 	default:
-		lv.ev = &ExpiringValue{Value: value}
+		var expiry time.Time
+		if cgm.ttlEnabled {
+			expiry = time.Now().Add(cgm.ttlDuration)
+		}
+		lv.ev = &ExpiringValue{Value: value, Expiry: expiry}
 	}
 
 	return value, nil
