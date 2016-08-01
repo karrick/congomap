@@ -1,17 +1,19 @@
 package congomap
 
 import (
+	"sync"
 	"time"
 )
 
 type channelMap struct {
-	db       map[string]expiringValue
-	duration time.Duration
-	halt     chan struct{}
-	lookup   func(string) (interface{}, error)
-	queue    chan func()
-	reaper   func(interface{})
-	ttl      bool
+	db     map[string]*ExpiringValue
+	halt   chan struct{}
+	lookup func(string) (interface{}, error)
+	queue  chan func()
+	reaper func(interface{})
+
+	ttlEnabled  bool
+	ttlDuration time.Duration
 }
 
 // NewChannelMap returns a map that uses channels to serialize
@@ -20,7 +22,7 @@ type channelMap struct {
 // channel resources back to the runtime.
 func NewChannelMap(setters ...Setter) (Congomap, error) {
 	cgm := &channelMap{
-		db:    make(map[string]expiringValue),
+		db:    make(map[string]*ExpiringValue),
 		halt:  make(chan struct{}),
 		queue: make(chan func()),
 	}
@@ -57,18 +59,17 @@ func (cgm *channelMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
 	}
-	cgm.duration = duration
-	cgm.ttl = true
+	cgm.ttlDuration = duration
+	cgm.ttlEnabled = true
 	return nil
 }
 
 // Delete removes a key value pair from a Congomap.
 func (cgm *channelMap) Delete(key string) {
 	cgm.queue <- func() {
-		if cgm.reaper != nil {
-			if ev, ok := cgm.db[key]; ok {
-				cgm.reaper(ev.value)
-			}
+		ev, ok := cgm.db[key]
+		if ok && cgm.reaper != nil {
+			cgm.reaper(ev.Value)
 		}
 		delete(cgm.db, key)
 	}
@@ -77,18 +78,18 @@ func (cgm *channelMap) Delete(key string) {
 // GC forces elimination of keys in Congomap with values that have
 // expired.
 func (cgm *channelMap) GC() {
-	if cgm.ttl {
+	if cgm.ttlEnabled {
 		cgm.queue <- func() {
-			now := time.Now().UnixNano()
+			now := time.Now()
 			var keysToRemove []string
 			for key, ev := range cgm.db {
-				if ev.expiry < now {
+				if ev.Expiry != zeroTime && now.After(ev.Expiry) {
 					keysToRemove = append(keysToRemove, key)
 				}
 			}
 			for _, key := range keysToRemove {
 				if cgm.reaper != nil {
-					cgm.reaper(cgm.db[key].value)
+					cgm.reaper(cgm.db[key].Value)
 				}
 				delete(cgm.db, key)
 			}
@@ -103,8 +104,8 @@ func (cgm *channelMap) Load(key string) (interface{}, bool) {
 	rq := make(chan result)
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
-		if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
-			rq <- result{value: ev.value, ok: true}
+		if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+			rq <- result{value: ev.Value, ok: true}
 			return
 		}
 		rq <- result{value: nil, ok: false}
@@ -116,11 +117,20 @@ func (cgm *channelMap) Load(key string) (interface{}, bool) {
 // Store sets the value associated with the given key.
 func (cgm *channelMap) Store(key string, value interface{}) {
 	cgm.queue <- func() {
-		ev := expiringValue{value: value}
-		if cgm.ttl {
-			ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+		var newValue *ExpiringValue
+
+		switch ev := value.(type) {
+		case *ExpiringValue:
+			newValue = ev
+		default:
+			var expiry time.Time
+			if cgm.ttlEnabled {
+				expiry = time.Now().Add(cgm.ttlDuration)
+			}
+			newValue = &ExpiringValue{Value: value, Expiry: expiry}
 		}
-		cgm.db[key] = ev
+
+		cgm.db[key] = newValue
 	}
 }
 
@@ -131,8 +141,8 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 	rq := make(chan result)
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
-		if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
-			rq <- result{value: ev.value, ok: true}
+		if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+			rq <- result{value: ev.Value, ok: true}
 			return
 		}
 		// key not there or expired
@@ -141,11 +151,21 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 			rq <- result{value: nil, ok: false, err: err}
 			return
 		}
-		ev = expiringValue{value: value}
-		if cgm.ttl {
-			ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+
+		var newValue *ExpiringValue
+
+		switch ev := value.(type) {
+		case *ExpiringValue:
+			newValue = ev
+		default:
+			var expiry time.Time
+			if cgm.ttlEnabled {
+				expiry = time.Now().Add(cgm.ttlDuration)
+			}
+			newValue = &ExpiringValue{Value: value, Expiry: expiry}
 		}
-		cgm.db[key] = ev
+
+		cgm.db[key] = newValue
 		rq <- result{value: value, ok: true}
 	}
 	res := <-rq
@@ -167,10 +187,10 @@ func (cgm channelMap) Keys() []string {
 func (cgm *channelMap) Pairs() <-chan *Pair {
 	pairs := make(chan *Pair)
 	cgm.queue <- func() {
-		now := time.Now().UnixNano()
+		now := time.Now()
 		for k, v := range cgm.db {
-			if !cgm.ttl || (v.expiry > now) {
-				pairs <- &Pair{k, v.value}
+			if v.Expiry == zeroTime || (v.Expiry.After(now)) {
+				pairs <- &Pair{k, v.Value}
 			}
 		}
 		close(pairs)
@@ -180,13 +200,13 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 
 // Close releases resources used by the Congomap.
 func (cgm *channelMap) Close() error {
-	cgm.halt <- struct{}{}
+	close(cgm.halt)
 	return nil
 }
 
 // Halt releases resources used by the Congomap.
 func (cgm *channelMap) Halt() {
-	cgm.halt <- struct{}{}
+	close(cgm.halt)
 }
 
 type result struct {
@@ -196,8 +216,8 @@ type result struct {
 }
 
 func (cgm *channelMap) run() {
-	duration := 5 * cgm.duration
-	if !cgm.ttl {
+	var duration time.Duration
+	if !cgm.ttlEnabled {
 		duration = time.Hour
 	} else if duration < time.Second {
 		duration = time.Minute
@@ -211,12 +231,18 @@ func (cgm *channelMap) run() {
 			cgm.GC()
 		case <-cgm.halt:
 			active = false
-			break
 		}
 	}
 	if cgm.reaper != nil {
-		for _, ev := range cgm.db {
-			cgm.reaper(ev.value)
+		var wg sync.WaitGroup
+		wg.Add(len(cgm.db))
+		for key, ev := range cgm.db {
+			delete(cgm.db, key)
+			go func(ev *ExpiringValue) {
+				cgm.reaper(ev.Value)
+				wg.Done()
+			}(ev)
 		}
+		wg.Wait()
 	}
 }
