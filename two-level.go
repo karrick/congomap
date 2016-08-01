@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const zeroTime time.Time = 0
+var zeroTime time.Time
 
 type twoLevelMap struct {
 	dbLock sync.RWMutex
@@ -15,11 +15,13 @@ type twoLevelMap struct {
 	lookup func(string) (interface{}, error)
 	reaper func(interface{})
 
-	// ignored
+	// ignored, but here because of Congomap interface...
 	ttlDuration time.Duration
 	ttlEnabled  bool
 }
 
+// lockedValue is a pointer to a value and the lock that protects it. All access to the value ought
+// to be protected by use of the lock.
 type lockedValue struct {
 	vlock sync.RWMutex
 	ev    *ExpiringValue // nil means not present
@@ -85,9 +87,9 @@ func (cgm *twoLevelMap) Delete(key string) {
 	delete(cgm.db, key)
 	cgm.dbLock.Unlock()
 
-	// ??? skip grabbing key lock
-
 	if ok && cgm.reaper != nil {
+		lv.vlock.Lock()
+		defer lv.vlock.Unlock() // NOTE: ensure unlock is called even if reaper panics
 		cgm.reaper(lv.ev.Value)
 	}
 }
@@ -111,11 +113,9 @@ func (cgm *twoLevelMap) GC() {
 		wg.Add(len(lockedValuesToDelete))
 		for _, lv := range lockedValuesToDelete {
 			go func(lv *lockedValue) {
-				// ??? skip grabbing key lock
-
-				// lv.vlock.Lock()
+				lv.vlock.Lock()
+				defer lv.vlock.Unlock() // NOTE: ensure unlock is called even if reaper panics
 				cgm.reaper(lv.ev.Value)
-				// lv.vlock.Unlock()
 				wg.Done()
 			}(lv)
 		}
@@ -128,6 +128,7 @@ func (cgm *twoLevelMap) GC() {
 func (cgm *twoLevelMap) Load(key string) (interface{}, bool) {
 	cgm.dbLock.RLock()
 	defer cgm.dbLock.RUnlock()
+
 	lv, ok := cgm.db[key]
 	if !ok {
 		return nil, false
@@ -135,6 +136,7 @@ func (cgm *twoLevelMap) Load(key string) (interface{}, bool) {
 
 	lv.vlock.Lock()
 	defer lv.vlock.Unlock()
+
 	if lv.ev != nil {
 		if lv.ev.Expiry == zeroTime || lv.ev.Expiry.After(time.Now()) {
 			return lv.ev.Value, true
@@ -145,17 +147,28 @@ func (cgm *twoLevelMap) Load(key string) (interface{}, bool) {
 
 // Store sets the value associated with the given key.
 func (cgm *twoLevelMap) Store(key string, value interface{}) {
-	var mv lockedValue
+	var newLockedValue lockedValue
 
 	switch ev := value.(type) {
-	case ExpiringValue:
-		mv.ev = &ev
+	case *ExpiringValue:
+		newLockedValue.ev = ev
 	default:
-		mv.ev = &ExpiringValue{Value: value}
+		newLockedValue.ev = &ExpiringValue{Value: value}
 	}
 
 	cgm.dbLock.Lock()
-	cgm.db[key] = &mv // ??? overwrite what's there, ignoring key lock ???
+	if cgm.reaper != nil {
+		if previousLockedValue, ok := cgm.db[key]; ok {
+			go func(lv *lockedValue) {
+				lv.vlock.Lock()
+				defer lv.vlock.Unlock() // NOTE: ensure unlock is called even if reaper panics
+				if lv.ev != nil {
+					cgm.reaper(lv.ev.Value)
+				}
+			}(previousLockedValue)
+		}
+	}
+	cgm.db[key] = &newLockedValue
 	cgm.dbLock.Unlock()
 }
 
@@ -164,21 +177,19 @@ func (cgm *twoLevelMap) Store(key string, value interface{}) {
 // function.
 func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	cgm.dbLock.Lock()
-	ev, ok := cgm.db[key]
-	// create entry if we don't have an entry for this key yet
+	lv, ok := cgm.db[key]
 	if !ok {
-		ev = &lockedValue{}
-		cgm.db[key] = ev
+		lv = &lockedValue{}
+		cgm.db[key] = lv
 	}
 	cgm.dbLock.Unlock()
 
-	// key-level lock
-	ev.lock.Lock()
-	defer ev.lock.Unlock()
+	lv.vlock.Lock()
+	defer lv.vlock.Unlock()
 
 	// value might have been filled by another go-routine
-	if ev.present && (!cgm.ttlEnabled || ev.expiry > time.Now().UnixNano()) {
-		return ev.value, nil
+	if lv.ev != nil && (lv.ev.Expiry == zeroTime || lv.ev.Expiry.After(time.Now())) {
+		return lv.ev.Value, nil
 	}
 
 	// it's our job to fill it
@@ -186,48 +197,69 @@ func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	ev.value = value
-	ev.present = true
-	if cgm.ttlEnabled {
-		ev.expiry = time.Now().UnixNano() + int64(cgm.ttlDuration)
+
+	switch ev := value.(type) {
+	case *ExpiringValue:
+		lv.ev = ev
+	default:
+		lv.ev = &ExpiringValue{Value: value}
 	}
 
 	return value, nil
 }
 
 // Keys returns an array of key values stored in the map.
-func (cgm *twoLevelMap) Keys() (keys []string) {
+func (cgm *twoLevelMap) Keys() []string {
 	cgm.dbLock.RLock()
-	defer cgm.dbLock.RUnlock()
-	keys = make([]string, 0, len(cgm.db))
+	keys := make([]string, 0, len(cgm.db))
 	for k := range cgm.db {
 		keys = append(keys, k)
 	}
-	return
+	cgm.dbLock.RUnlock()
+	return keys
 }
 
 // Pairs returns a channel through which key value pairs are read. Pairs will lock the Congomap so
 // that no other accessors can be used until the returned channel is closed.
 func (cgm *twoLevelMap) Pairs() <-chan *Pair {
+	keys := make([]string, 0, len(cgm.db))
+	values := make([]*lockedValue, 0, len(cgm.db))
+
 	cgm.dbLock.RLock()
+	for k, v := range cgm.db {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	cgm.dbLock.RUnlock()
 
 	pairs := make(chan *Pair)
+
 	go func(pairs chan<- *Pair) {
-		now := time.Now().UnixNano()
-		for k, v := range cgm.db {
-			if !cgm.ttlEnabled || (v.expiry > now) {
-				pairs <- &Pair{k, v.value}
-			}
+		now := time.Now()
+
+		var wg sync.WaitGroup
+		wg.Add(len(keys))
+
+		for i, key := range keys {
+			go func(key string, lv *lockedValue) {
+				if lv.ev != nil {
+					if lv.ev.Expiry == zeroTime || lv.ev.Expiry.After(now) {
+						pairs <- &Pair{key, lv.ev.Value}
+					}
+				}
+				wg.Done()
+			}(key, values[i])
 		}
+
+		wg.Wait()
 		close(pairs)
-		cgm.dbLock.RUnlock()
 	}(pairs)
 	return pairs
 }
 
 // Close releases resources used by the Congomap.
 func (cgm *twoLevelMap) Close() error {
-	cgm.halt <- struct{}{}
+	close(cgm.halt)
 	return nil
 }
 
@@ -237,7 +269,7 @@ func (cgm *twoLevelMap) Halt() {
 }
 
 func (cgm *twoLevelMap) run() {
-	duration := 5 * cgm.ttlDuration
+	var duration time.Duration
 	if !cgm.ttlEnabled {
 		duration = time.Hour
 	} else if duration < time.Second {
@@ -252,9 +284,19 @@ func (cgm *twoLevelMap) run() {
 			active = false
 		}
 	}
+	// ??? do we need to lock dbLock ???
 	if cgm.reaper != nil {
-		for _, ev := range cgm.db {
-			cgm.reaper(ev.value)
+		var wg sync.WaitGroup
+		wg.Add(len(cgm.db))
+		for key, lv := range cgm.db {
+			go func(key string, lv *lockedValue) {
+				delete(cgm.db, key)
+				lv.vlock.Lock()
+				defer lv.vlock.Unlock() // NOTE: ensure unlock is called even if reaper panics
+				cgm.reaper(lv.ev.Value)
+				wg.Done()
+			}(key, lv)
 		}
+		wg.Wait()
 	}
 }

@@ -62,21 +62,28 @@ func randomState() string {
 	return states[rand.Intn(len(states))]
 }
 
-func withLoadedCongomap(cm Congomap, loaders, storers, loadstorers int, fn func()) {
+func withLoadedCongomap(cgm Congomap, loaders, storers, loadstorers int, fn func()) {
 	var stop bool
 	exited := make(chan struct{})
 	for i := 0; i < loaders; i++ {
 		go func() {
 			for !stop {
-				_, _ = cm.Load(randomState())
+				_, _ = cgm.Load(randomState())
 			}
 			exited <- struct{}{}
 		}()
 	}
 	for i := 0; i < storers; i++ {
 		go func() {
+			var value interface{}
 			for !stop {
-				cm.Store(randomState(), randomState())
+				value = randomState()
+				switch cgm.(type) {
+				case *twoLevelMap:
+					value = &ExpiringValue{Value: value, Expiry: time.Now().Add(time.Second)}
+				default:
+				}
+				cgm.Store(randomState(), value)
 			}
 			exited <- struct{}{}
 		}()
@@ -84,7 +91,7 @@ func withLoadedCongomap(cm Congomap, loaders, storers, loadstorers int, fn func(
 	for i := 0; i < loadstorers; i++ {
 		go func() {
 			for !stop {
-				_, _ = cm.LoadStore(randomState())
+				_, _ = cgm.LoadStore(randomState())
 			}
 			exited <- struct{}{}
 		}()
@@ -122,14 +129,14 @@ func parallelLoadStorers(b *testing.B, cm Congomap) {
 	})
 }
 
-func BenchmarkChannelMapLoad(b *testing.B) {
-	cm, _ := NewChannelMap()
+func BenchmarkTwoLevelMapLoad(b *testing.B) {
+	cm, _ := NewTwoLevelMap()
 	defer cm.Halt()
 	parallelLoaders(b, cm)
 }
 
-func BenchmarkChannelMapLoadStore(b *testing.B) {
-	cm, _ := NewChannelMap()
+func BenchmarkTwoLevelMapLoadStore(b *testing.B) {
+	cm, _ := NewTwoLevelMap()
 	defer cm.Halt()
 	parallelLoadStorers(b, cm)
 }
@@ -170,24 +177,6 @@ func BenchmarkSyncMutexMapLoadStore(b *testing.B) {
 	parallelLoadStorers(b, cm)
 }
 
-func BenchmarkSyncMutexShardedMapLoad(b *testing.B) {
-	cm, _ := NewSyncMutexShardedMap()
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncMutexShardedMapLoadTTL(b *testing.B) {
-	cm, _ := NewSyncMutexShardedMap(TTL(time.Second))
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncMutexShardedMapLoadStore(b *testing.B) {
-	cm, _ := NewSyncMutexShardedMap()
-	defer cm.Halt()
-	parallelLoadStorers(b, cm)
-}
-
 func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
 	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
 	cm, _ := NewSyncMutexMap(Lookup(lookup))
@@ -203,9 +192,9 @@ func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
 	preventCompilerOptimizingOutBenchmarks = r
 }
 
-func _BenchmarkChannelMapManyLoadersLoaderPerspective(b *testing.B) {
+func _BenchmarkTwoLevelMapManyLoadersLoaderPerspective(b *testing.B) {
 	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
-	cm, _ := NewChannelMap(Lookup(lookup))
+	cm, _ := NewTwoLevelMap(Lookup(lookup))
 	defer cm.Halt()
 
 	var r interface{}
