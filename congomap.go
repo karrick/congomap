@@ -1,9 +1,6 @@
 package congomap
 
-import (
-	"sync"
-	"time"
-)
+import "time"
 
 // Congomap objects are useful when you need a concurrent go map.
 type Congomap interface {
@@ -61,10 +58,8 @@ func TTL(duration time.Duration) Setter {
 }
 
 type expiringValue struct {
-	keylock sync.RWMutex
-	value   interface{}
-	expiry  int64
-	present bool
+	value  interface{}
+	expiry int64
 }
 
 // ErrNoLookupDefined is returned by LoadStore() method when a key is
