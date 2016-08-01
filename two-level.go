@@ -294,17 +294,19 @@ func (cgm *twoLevelMap) run() {
 	}
 	// ??? do we need to lock dbLock ???
 	if cgm.reaper != nil {
+		cgm.dbLock.Lock()
 		var wg sync.WaitGroup
 		wg.Add(len(cgm.db))
 		for key, lv := range cgm.db {
-			go func(key string, lv *lockedValue) {
-				delete(cgm.db, key)
+			delete(cgm.db, key)
+			go func(lv *lockedValue) {
 				lv.vlock.Lock()
 				defer lv.vlock.Unlock() // NOTE: ensure unlock is called even if reaper panics
 				cgm.reaper(lv.ev.Value)
 				wg.Done()
-			}(key, lv)
+			}(lv)
 		}
 		wg.Wait()
+		cgm.dbLock.Unlock()
 	}
 }
