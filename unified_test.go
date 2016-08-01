@@ -62,12 +62,18 @@ func loadNoTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadNoTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap()
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap()
 	loadNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap()
 	loadNoTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap()
+	loadNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
@@ -82,12 +88,18 @@ func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadBeforeTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(TTL(time.Minute))
 	loadBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Minute))
 	loadBeforeTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(TTL(time.Minute))
+	loadBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Minute))
@@ -103,12 +115,18 @@ func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadAfterTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(TTL(time.Nanosecond))
 	loadAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond))
 	loadAfterTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(TTL(time.Nanosecond))
+	loadAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond))
@@ -152,12 +170,18 @@ func loadStoreValueNil(t *testing.T, cgm Congomap, which, key string) {
 ////////////////////
 
 func TestLoadStoreNoLookupNoTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap()
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap()
 	loadStoreNoLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap()
 	loadStoreNoLookupNoTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap()
+	loadStoreNoLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
@@ -174,12 +198,18 @@ func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreFailingLookupNoTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup))
 	loadStoreFailingLookupNoTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(failingLookup))
+	loadStoreFailingLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup))
@@ -196,12 +226,18 @@ func loadStoreFailingLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreLookupNoTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup))
 	loadStoreLookupNoTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(succeedingLookup))
+	loadStoreLookupNoTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup))
@@ -218,12 +254,18 @@ func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 ////////////////////
 
 func TestLoadStoreNoLookupBeforeTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Minute))
 	loadStoreNoLookupBeforeTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(TTL(time.Minute))
+	loadStoreNoLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Minute))
@@ -240,12 +282,18 @@ func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreFailingLookupBeforeTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Minute))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Minute))
 	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(failingLookup), TTL(time.Minute))
+	loadStoreFailingLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup), TTL(time.Minute))
@@ -262,12 +310,18 @@ func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreLookupBeforeTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Minute))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Minute))
 	loadStoreLookupBeforeTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Minute))
+	loadStoreLookupBeforeTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Minute))
@@ -284,12 +338,18 @@ func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 ////////////////////
 
 func TestLoadStoreNoLookupAfterTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(TTL(time.Nanosecond))
+	loadStoreNoLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond))
@@ -307,12 +367,18 @@ func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreFailingLookupAfterTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Nanosecond))
 	loadStoreFailingLookupAfterTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	loadStoreFailingLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup), TTL(time.Nanosecond))
@@ -330,12 +396,18 @@ func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 ////
 
 func TestLoadStoreLookupAfterTTL(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
 	loadStoreLookupAfterTTL(t, cgm, "sync-atomic")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	loadStoreLookupAfterTTL(t, cgm, "sync-mutex")
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
@@ -364,14 +436,23 @@ func TestPairs(t *testing.T) {
 		}
 	}
 
-	cgm, _ := NewSyncAtomicMap()
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap()
 	test(t, cgm, "sync-atomic")
+	_ = cgm.Close()
 
 	cgm, _ = NewSyncMutexMap()
 	test(t, cgm, "sync-mutex")
+	_ = cgm.Close()
+
+	cgm, _ = NewSyncAtomicMap()
+	test(t, cgm, "sync-atomic")
+	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
 	test(t, cgm, "twoLevel")
+	_ = cgm.Close()
 }
 
 ////////////////////////////////////////
@@ -390,7 +471,9 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 		}
 	}
 
-	cgm, _ := NewTwoLevelMap(Reaper(reaper))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Reaper(reaper))
 	which = "twoLevel"
 	cgm.Store("hit", 42)
 	cgm.Delete("hit")
@@ -418,6 +501,15 @@ func TestReaperInvokedDuringDelete(t *testing.T) {
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
+
+	cgm, _ = NewTwoLevelMap(Reaper(reaper))
+	which = "twoLevel"
+	cgm.Store("hit", 42)
+	cgm.Delete("hit")
+	_ = cgm.Close()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
 }
 
 func TestReaperInvokedDuringGC(t *testing.T) {
@@ -433,7 +525,9 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 		}
 	}
 
-	cgm, _ := NewTwoLevelMap(TTL(time.Nanosecond), Reaper(reaper))
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(TTL(time.Nanosecond), Reaper(reaper))
 	which = "twoLevel"
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
@@ -464,6 +558,16 @@ func TestReaperInvokedDuringGC(t *testing.T) {
 	if invoked != true {
 		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
 	}
+
+	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond), Reaper(reaper))
+	which = "twoLevel"
+	cgm.Store("hit", 42)
+	time.Sleep(time.Millisecond)
+	cgm.GC()
+	_ = cgm.Close()
+	if invoked != true {
+		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
+	}
 }
 
 func TestReaperInvokedDuringClose(t *testing.T) {
@@ -479,29 +583,38 @@ func TestReaperInvokedDuringClose(t *testing.T) {
 		wg.Done()
 	}
 
-	wg.Add(1)
-	cgm, _ := NewTwoLevelMap(Reaper(reaper))
-	which = "twoLevel"
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Reaper(reaper))
+	which = "sync-atomic"
 	cgm.Store("hit", 42)
+	wg.Add(1)
 	_ = cgm.Close()
 	wg.Wait()
 
-	wg.Add(1)
 	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
 	which = "sync-atomic"
 	cgm.Store("hit", 42)
+	wg.Add(1)
 	_ = cgm.Close()
 	wg.Wait()
 
-	wg.Add(1)
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
 	which = "sync-mutex"
 	cgm.Store("hit", 42)
+	wg.Add(1)
+	_ = cgm.Close()
+	wg.Wait()
+
+	cgm, _ = NewTwoLevelMap(Reaper(reaper))
+	which = "twoLevel"
+	cgm.Store("hit", 42)
+	wg.Add(1)
 	_ = cgm.Close()
 	wg.Wait()
 }
 
-func TestRace(t *testing.T) {
+func _TestRace(t *testing.T) {
 	test := func(t *testing.T, cgm Congomap, which string) {
 		const tasks = 2048
 		const iterations = 1000
@@ -530,15 +643,21 @@ func TestRace(t *testing.T) {
 		wg.Wait()
 	}
 
-	cgm, _ := NewTwoLevelMap(Lookup(randomFailOnLookup))
-	test(t, cgm, "twoLevel")
+	var cgm Congomap
+
+	cgm, _ = NewChannelMap(Lookup(randomFailOnLookup))
+	test(t, cgm, "sync-atomic")
 	_ = cgm.Close()
 
-	// cgm, _ = NewSyncMutexMap(Lookup(randomFailOnLookup))
-	// test(t, cgm, "sync-mutex")
-	// _ = cgm.Close()
+	cgm, _ = NewSyncAtomicMap(Lookup(randomFailOnLookup))
+	test(t, cgm, "sync-atomic")
+	_ = cgm.Close()
 
-	// cgm, _ = NewSyncAtomicMap(Lookup(randomFailOnLookup))
-	// test(t, cgm, "sync-atomic")
-	// _ = cgm.Close()
+	cgm, _ = NewSyncMutexMap(Lookup(randomFailOnLookup))
+	test(t, cgm, "sync-mutex")
+	_ = cgm.Close()
+
+	cgm, _ = NewTwoLevelMap(Lookup(randomFailOnLookup))
+	test(t, cgm, "twoLevel")
+	_ = cgm.Close()
 }

@@ -2,6 +2,7 @@ package congomap
 
 import (
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
@@ -62,152 +63,190 @@ func randomState() string {
 	return states[rand.Intn(len(states))]
 }
 
-func withLoadedCongomap(cgm Congomap, loaders, storers, loadstorers int, fn func()) {
+func preloadCongomap(cgm Congomap) {
+	const preloadKeys = 10000
+
+	for i := 0; i < preloadKeys; i++ {
+		key := randomState() + randomState() + randomState() + randomState()
+		cgm.Store(key, randomState())
+	}
+}
+
+func parallelLoaders(b *testing.B, cgm Congomap) {
+	preloadCongomap(cgm)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = cgm.Load(randomState())
+		}
+	})
+}
+
+func parallelLoadStorers(b *testing.B, cgm Congomap) {
+	preloadCongomap(cgm)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = cgm.LoadStore(randomState())
+		}
+	})
+}
+
+// Load
+
+func BenchmarkLoadChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap()
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap()
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap()
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap()
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+// LoadTTL
+
+func BenchmarkLoadTTLChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadTTLSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadTTLSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+func BenchmarkLoadTTLTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoaders(b, cgm)
+}
+
+// LoadStore
+
+func BenchmarkLoadStoreChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap()
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap()
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap()
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap()
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+// LoadStoreTTL
+
+func BenchmarkLoadStoreTTLChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreTTLSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreTTLSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+func BenchmarkLoadStoreTTLTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap(TTL(time.Second))
+	defer cgm.Close()
+	parallelLoadStorers(b, cgm)
+}
+
+//
+
+func withLoadedCongomap(cgm Congomap, loaders, storers, loadstorers int, callback func()) {
 	var stop bool
-	exited := make(chan struct{})
+	var wg sync.WaitGroup
+
+	preloadCongomap(cgm)
+
+	wg.Add(loaders)
 	for i := 0; i < loaders; i++ {
 		go func() {
 			for !stop {
 				_, _ = cgm.Load(randomState())
 			}
-			exited <- struct{}{}
+			wg.Done()
 		}()
 	}
+
+	wg.Add(storers)
 	for i := 0; i < storers; i++ {
 		go func() {
-			var value interface{}
 			for !stop {
-				value = randomState()
-				cgm.Store(randomState(), value)
+				cgm.Store(randomState(), randomState())
 			}
-			exited <- struct{}{}
+			wg.Done()
 		}()
 	}
+
+	wg.Add(loadstorers)
 	for i := 0; i < loadstorers; i++ {
 		go func() {
 			for !stop {
 				_, _ = cgm.LoadStore(randomState())
 			}
-			exited <- struct{}{}
+			wg.Done()
 		}()
 	}
 
-	fn()
-
+	callback()
 	stop = true
-	for i := 0; i < loaders+storers+loadstorers; i++ {
-		<-exited
-	}
+	wg.Wait()
 }
 
-func parallelBench(b *testing.B, cm Congomap, fn func(*testing.PB)) {
-	// doesn't necessarily fill the entire map
-	for i := 0; i < len(states); i++ {
-		cm.Store(randomState(), randomState())
-	}
-	b.RunParallel(fn)
-}
+// Many LoadStorers
 
-func parallelLoaders(b *testing.B, cm Congomap) {
-	parallelBench(b, cm, func(pb *testing.PB) {
-		for pb.Next() {
-			_, _ = cm.Load(randomState())
-		}
-	})
-}
+const manyLoadStorers = 1000
 
-func parallelLoadStorers(b *testing.B, cm Congomap) {
-	parallelBench(b, cm, func(pb *testing.PB) {
-		for pb.Next() {
-			_, _ = cm.LoadStore(randomState())
-		}
-	})
-}
-
-func BenchmarkTwoLevelMapLoad(b *testing.B) {
-	cm, _ := NewTwoLevelMap()
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkTwoLevelMapLoadStore(b *testing.B) {
-	cm, _ := NewTwoLevelMap()
-	defer cm.Halt()
-	parallelLoadStorers(b, cm)
-}
-
-func BenchmarkSyncAtomicMapLoad(b *testing.B) {
-	cm, _ := NewSyncAtomicMap()
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncAtomicMapLoadTTL(b *testing.B) {
-	cm, _ := NewSyncAtomicMap(TTL(time.Second))
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncAtomicMapLoadStore(b *testing.B) {
-	cm, _ := NewSyncAtomicMap()
-	defer cm.Halt()
-	parallelLoadStorers(b, cm)
-}
-
-func BenchmarkSyncMutexMapLoad(b *testing.B) {
-	cm, _ := NewSyncMutexMap()
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncMutexMapLoadTTL(b *testing.B) {
-	cm, _ := NewSyncMutexMap(TTL(time.Second))
-	defer cm.Halt()
-	parallelLoaders(b, cm)
-}
-
-func BenchmarkSyncMutexMapLoadStore(b *testing.B) {
-	cm, _ := NewSyncMutexMap()
-	defer cm.Halt()
-	parallelLoadStorers(b, cm)
-}
-
-func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
-	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
-	cm, _ := NewSyncMutexMap(Lookup(lookup))
-	defer cm.Halt()
-
+func BenchmarkManyLoadStorersChannelMap(b *testing.B) {
 	var r interface{}
-	withLoadedCongomap(cm, 20, 1, 1, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cm.Load(randomState())
-		}
-	})
+	cm, _ := NewChannelMap()
+	defer cm.Close()
 
-	preventCompilerOptimizingOutBenchmarks = r
-}
-
-func _BenchmarkTwoLevelMapManyLoadersLoaderPerspective(b *testing.B) {
-	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
-	cm, _ := NewTwoLevelMap(Lookup(lookup))
-	defer cm.Halt()
-
-	var r interface{}
-	withLoadedCongomap(cm, 20, 1, 1, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cm.Load(randomState())
-		}
-	})
-
-	preventCompilerOptimizingOutBenchmarks = r
-}
-
-func _BenchmarkSyncMutexMapManyLoadersLoadStorerPerspective(b *testing.B) {
-	var r interface{}
-	cm, _ := NewSyncMutexMap()
-	defer cm.Halt()
-
-	withLoadedCongomap(cm, 20, 1, 1, func() {
+	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
 		for i := 0; i < b.N; i++ {
 			r, _ = cm.LoadStore(randomState())
 		}
@@ -216,5 +255,44 @@ func _BenchmarkSyncMutexMapManyLoadersLoadStorerPerspective(b *testing.B) {
 	preventCompilerOptimizingOutBenchmarks = r
 }
 
-// consider adding loaded benchmarks for other types
-// consider loading up the map with 10k entries
+func BenchmarkManyLoadStorersSyncAtomicMap(b *testing.B) {
+	var r interface{}
+	cm, _ := NewSyncAtomicMap()
+	defer cm.Close()
+
+	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.LoadStore(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
+}
+
+func BenchmarkManyLoadStorersSyncMutexMap(b *testing.B) {
+	var r interface{}
+	cm, _ := NewSyncMutexMap()
+	defer cm.Close()
+
+	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.LoadStore(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
+}
+
+func BenchmarkManyLoadStorersTwoLevelMap(b *testing.B) {
+	var r interface{}
+	cm, _ := NewTwoLevelMap()
+	defer cm.Close()
+
+	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.LoadStore(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
+}
