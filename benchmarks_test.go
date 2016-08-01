@@ -243,12 +243,12 @@ const manyLoadStorers = 1000
 
 func BenchmarkManyLoadStorersChannelMap(b *testing.B) {
 	var r interface{}
-	cm, _ := NewChannelMap()
-	defer cm.Close()
+	cgm, _ := NewChannelMap()
+	defer cgm.Close()
 
-	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
 		for i := 0; i < b.N; i++ {
-			r, _ = cm.LoadStore(randomState())
+			r, _ = cgm.LoadStore(randomState())
 		}
 	})
 
@@ -257,12 +257,12 @@ func BenchmarkManyLoadStorersChannelMap(b *testing.B) {
 
 func BenchmarkManyLoadStorersSyncAtomicMap(b *testing.B) {
 	var r interface{}
-	cm, _ := NewSyncAtomicMap()
-	defer cm.Close()
+	cgm, _ := NewSyncAtomicMap()
+	defer cgm.Close()
 
-	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
 		for i := 0; i < b.N; i++ {
-			r, _ = cm.LoadStore(randomState())
+			r, _ = cgm.LoadStore(randomState())
 		}
 	})
 
@@ -271,12 +271,12 @@ func BenchmarkManyLoadStorersSyncAtomicMap(b *testing.B) {
 
 func BenchmarkManyLoadStorersSyncMutexMap(b *testing.B) {
 	var r interface{}
-	cm, _ := NewSyncMutexMap()
-	defer cm.Close()
+	cgm, _ := NewSyncMutexMap()
+	defer cgm.Close()
 
-	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
 		for i := 0; i < b.N; i++ {
-			r, _ = cm.LoadStore(randomState())
+			r, _ = cgm.LoadStore(randomState())
 		}
 	})
 
@@ -285,12 +285,12 @@ func BenchmarkManyLoadStorersSyncMutexMap(b *testing.B) {
 
 func BenchmarkManyLoadStorersTwoLevelMap(b *testing.B) {
 	var r interface{}
-	cm, _ := NewTwoLevelMap()
-	defer cm.Close()
+	cgm, _ := NewTwoLevelMap()
+	defer cgm.Close()
 
-	withLoadedCongomap(cm, 0, 0, manyLoadStorers, func() {
+	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
 		for i := 0; i < b.N; i++ {
-			r, _ = cm.LoadStore(randomState())
+			r, _ = cgm.LoadStore(randomState())
 		}
 	})
 
