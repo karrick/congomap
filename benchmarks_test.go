@@ -63,29 +63,34 @@ func randomState() string {
 	return states[rand.Intn(len(states))]
 }
 
-func preloadCongomap(cgm Congomap) {
-	const preloadKeys = 10000
+func randomKey() string {
+	return randomState() + "-" + randomState()
+}
 
-	for i := 0; i < preloadKeys; i++ {
-		key := randomState() + randomState() + randomState() + randomState()
-		cgm.Store(key, randomState())
+func preloadCongomap(cgm Congomap) {
+	for _, k1 := range states {
+		for _, k2 := range states {
+			cgm.Store(k1+"-"+k2, randomState())
+		}
 	}
 }
 
 func parallelLoaders(b *testing.B, cgm Congomap) {
 	preloadCongomap(cgm)
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = cgm.Load(randomState())
+			preventCompilerOptimizingOutBenchmarks, _ = cgm.Load(randomKey())
 		}
 	})
 }
 
 func parallelLoadStorers(b *testing.B, cgm Congomap) {
 	preloadCongomap(cgm)
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = cgm.LoadStore(randomState())
+			preventCompilerOptimizingOutBenchmarks, _ = cgm.LoadStore(randomKey())
 		}
 	})
 }
@@ -194,105 +199,119 @@ func BenchmarkLoadStoreTTLTwoLevelMap(b *testing.B) {
 	parallelLoadStorers(b, cgm)
 }
 
-//
+// ManyLoadStorers
 
-func withLoadedCongomap(cgm Congomap, loaders, storers, loadstorers int, callback func()) {
+const (
+	loaderCount     = 1
+	storerCount     = 1
+	loadStorerCount = 1000
+)
+
+func benchmarkHighConcurrency(b *testing.B, cgm Congomap) {
+	preloadCongomap(cgm)
+
 	var stop bool
 	var wg sync.WaitGroup
 
-	preloadCongomap(cgm)
-
-	wg.Add(loaders)
-	for i := 0; i < loaders; i++ {
+	wg.Add(loaderCount)
+	for i := 0; i < loaderCount; i++ {
 		go func() {
+			var r interface{}
+			_ = r
 			for !stop {
-				_, _ = cgm.Load(randomState())
+				r, _ = cgm.Load(randomKey())
 			}
 			wg.Done()
 		}()
 	}
 
-	wg.Add(storers)
-	for i := 0; i < storers; i++ {
+	wg.Add(storerCount)
+	for i := 0; i < storerCount; i++ {
 		go func() {
 			for !stop {
-				cgm.Store(randomState(), randomState())
+				cgm.Store(randomKey(), randomState())
 			}
 			wg.Done()
 		}()
 	}
 
-	wg.Add(loadstorers)
-	for i := 0; i < loadstorers; i++ {
+	wg.Add(loadStorerCount)
+	for i := 0; i < loadStorerCount; i++ {
 		go func() {
+			var r interface{}
+			_ = r
 			for !stop {
-				_, _ = cgm.LoadStore(randomState())
+				r, _ = cgm.LoadStore(randomKey())
 			}
 			wg.Done()
 		}()
 	}
 
-	callback()
+	b.ResetTimer()
+
+	var r interface{}
+	for i := 0; i < b.N; i++ {
+		r, _ = cgm.LoadStore(randomKey())
+	}
+
 	stop = true
 	wg.Wait()
-}
-
-// Many LoadStorers
-
-const manyLoadStorers = 1000
-
-func BenchmarkManyLoadStorersChannelMap(b *testing.B) {
-	var r interface{}
-	cgm, _ := NewChannelMap()
-	defer cgm.Close()
-
-	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cgm.LoadStore(randomState())
-		}
-	})
 
 	preventCompilerOptimizingOutBenchmarks = r
 }
 
-func BenchmarkManyLoadStorersSyncAtomicMap(b *testing.B) {
-	var r interface{}
-	cgm, _ := NewSyncAtomicMap()
+func BenchmarkHighConcurrencyChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap(TTL(time.Minute))
 	defer cgm.Close()
-
-	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cgm.LoadStore(randomState())
-		}
-	})
-
-	preventCompilerOptimizingOutBenchmarks = r
+	benchmarkHighConcurrency(b, cgm)
 }
 
-func BenchmarkManyLoadStorersSyncMutexMap(b *testing.B) {
-	var r interface{}
-	cgm, _ := NewSyncMutexMap()
+func BenchmarkHighConcurrencySyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap(TTL(time.Minute))
 	defer cgm.Close()
-
-	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cgm.LoadStore(randomState())
-		}
-	})
-
-	preventCompilerOptimizingOutBenchmarks = r
+	benchmarkHighConcurrency(b, cgm)
 }
 
-func BenchmarkManyLoadStorersTwoLevelMap(b *testing.B) {
-	var r interface{}
-	cgm, _ := NewTwoLevelMap()
+func BenchmarkHighConcurrencySyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
 	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
+}
 
-	withLoadedCongomap(cgm, 0, 0, manyLoadStorers, func() {
-		for i := 0; i < b.N; i++ {
-			r, _ = cgm.LoadStore(randomState())
-		}
-	})
+func BenchmarkHighConcurrencyTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap(TTL(time.Minute))
+	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
+}
 
-	preventCompilerOptimizingOutBenchmarks = r
+// lookup takes random time
+
+func randomSlowLookup(_ string) (interface{}, error) {
+	delay := 25*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
+	time.Sleep(delay)
+	return 42, nil
+}
+
+func BenchmarkSlowLookupsChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap(Lookup(randomSlowLookup))
+	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
+}
+
+func BenchmarkSlowLookupsSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap(Lookup(randomSlowLookup))
+	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
+}
+
+func BenchmarkSlowLookupsSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap(Lookup(randomSlowLookup))
+	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
+}
+
+func BenchmarkSlowLookupsTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap(Lookup(randomSlowLookup))
+	defer cgm.Close()
+	benchmarkHighConcurrency(b, cgm)
 }
