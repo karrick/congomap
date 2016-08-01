@@ -460,120 +460,84 @@ func TestPairs(t *testing.T) {
 
 func TestReaperInvokedDuringDelete(t *testing.T) {
 	expected := 42
-	var invoked bool
-
 	var which string
+	var wg sync.WaitGroup
 
 	reaper := func(value interface{}) {
-		invoked = true
 		if v, ok := value.(int); !ok || v != expected {
 			t.Errorf("reaper receives value during delete; Which: %s; Key: %q; Actual: %#v; Expected: %#v", which, value, expected)
 		}
+		wg.Done()
+	}
+
+	test := func(cgm Congomap, w string) {
+		defer cgm.Close()
+
+		which = w
+		cgm.Store("hit", 42)
+
+		wg.Add(1)
+		cgm.Delete("hit")
+		wg.Wait()
 	}
 
 	var cgm Congomap
 
 	cgm, _ = NewChannelMap(Reaper(reaper))
-	which = "twoLevel"
-	cgm.Store("hit", 42)
-	cgm.Delete("hit")
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "channel")
 
-	invoked = false
 	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
-	which = "sync-atomic"
-	cgm.Store("hit", 42)
-	cgm.Delete("hit")
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "sync-atomic")
 
-	invoked = false
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
-	which = "sync-mutex"
-	cgm.Store("hit", 42)
-	cgm.Delete("hit")
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "sync-mutex")
 
 	cgm, _ = NewTwoLevelMap(Reaper(reaper))
-	which = "twoLevel"
-	cgm.Store("hit", 42)
-	cgm.Delete("hit")
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "two-level")
 }
 
 func TestReaperInvokedDuringGC(t *testing.T) {
 	expected := 42
-	var invoked bool
-
 	var which string
+	var wg sync.WaitGroup
 
 	reaper := func(value interface{}) {
-		invoked = true
 		if v, ok := value.(int); !ok || v != expected {
 			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
 		}
+		wg.Done()
+	}
+
+	test := func(cgm Congomap, w string) {
+		defer cgm.Close()
+
+		which = w
+		cgm.Store("hit", 42)
+		time.Sleep(time.Millisecond)
+
+		wg.Add(1)
+		cgm.GC()
+		wg.Wait()
 	}
 
 	var cgm Congomap
 
 	cgm, _ = NewChannelMap(TTL(time.Nanosecond), Reaper(reaper))
-	which = "twoLevel"
-	cgm.Store("hit", 42)
-	time.Sleep(time.Millisecond)
-	cgm.GC()
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "channel")
 
-	invoked = false
 	cgm, _ = NewSyncAtomicMap(TTL(time.Nanosecond), Reaper(reaper))
-	which = "sync-atomic"
-	cgm.Store("hit", 42)
-	time.Sleep(time.Millisecond)
-	cgm.GC()
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "sync-atomic")
 
-	invoked = false
 	cgm, _ = NewSyncMutexMap(TTL(time.Nanosecond), Reaper(reaper))
-	which = "sync-mutex"
-	cgm.Store("hit", 42)
-	time.Sleep(time.Millisecond)
-	cgm.GC()
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "sync-mutex")
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond), Reaper(reaper))
-	which = "twoLevel"
-	cgm.Store("hit", 42)
-	time.Sleep(time.Millisecond)
-	cgm.GC()
-	_ = cgm.Close()
-	if invoked != true {
-		t.Errorf("Which: %s; Actual: %#v; Expected: %#v", which, invoked, true)
-	}
+	test(cgm, "two-level")
 }
 
 func TestReaperInvokedDuringClose(t *testing.T) {
 	expected := 42
 	var wg sync.WaitGroup
-
 	var which string
 
 	reaper := func(value interface{}) {
@@ -583,33 +547,27 @@ func TestReaperInvokedDuringClose(t *testing.T) {
 		wg.Done()
 	}
 
+	test := func(cgm Congomap, w string) {
+		which = w
+		cgm.Store("hit", 42)
+		time.Sleep(time.Millisecond)
+
+		wg.Add(1)
+		_ = cgm.Close()
+		wg.Wait()
+	}
+
 	var cgm Congomap
 
 	cgm, _ = NewChannelMap(Reaper(reaper))
-	which = "sync-atomic"
-	cgm.Store("hit", 42)
-	wg.Add(1)
-	_ = cgm.Close()
-	wg.Wait()
+	test(cgm, "channel")
 
 	cgm, _ = NewSyncAtomicMap(Reaper(reaper))
-	which = "sync-atomic"
-	cgm.Store("hit", 42)
-	wg.Add(1)
-	_ = cgm.Close()
-	wg.Wait()
+	test(cgm, "sync-atomic")
 
 	cgm, _ = NewSyncMutexMap(Reaper(reaper))
-	which = "sync-mutex"
-	cgm.Store("hit", 42)
-	wg.Add(1)
-	_ = cgm.Close()
-	wg.Wait()
+	test(cgm, "sync-mutex")
 
 	cgm, _ = NewTwoLevelMap(Reaper(reaper))
-	which = "twoLevel"
-	cgm.Store("hit", 42)
-	wg.Add(1)
-	_ = cgm.Close()
-	wg.Wait()
+	test(cgm, "two-level")
 }
