@@ -2,6 +2,7 @@ package congomap
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +19,13 @@ func failingLookup(_ string) (interface{}, error) {
 }
 
 func succeedingLookup(_ string) (interface{}, error) {
+	return 42, nil
+}
+
+func randomLookup(_ string) (interface{}, error) {
+	if rand.Float64() < 0.3 {
+		return nil, errLookupFailed
+	}
 	return 42, nil
 }
 
@@ -557,4 +565,50 @@ func TestReaperInvokedDuringClose(t *testing.T) {
 	cgm.Store("hit", 42)
 	_ = cgm.Close()
 	wg.Wait()
+}
+
+func TestRace(t *testing.T) {
+	test := func(t *testing.T, cgm Congomap, which string) {
+		const tasks = 2048
+		const iterations = 1000
+
+		t.Log(which)
+
+		keys := []string{
+			"zero", "one", "two", "three", "four",
+			// "five", "six", "seven", "eight", "nine",
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(tasks)
+		for i := 0; i < tasks; i++ {
+			go func(cgm Congomap, wg *sync.WaitGroup, keys []string) {
+				for j := 0; j < iterations; j++ {
+					if j%2 == 0 {
+						_, _ = cgm.LoadStore(keys[rand.Intn(len(keys))])
+					} else {
+						cgm.Delete(keys[rand.Intn(len(keys))])
+					}
+				}
+				wg.Done()
+			}(cgm, &wg, keys)
+		}
+		wg.Wait()
+	}
+
+	cgm, _ := NewSyncMutexShardedMap(Lookup(randomLookup))
+	test(t, cgm, "sync-mutex-sharded")
+	_ = cgm.Close()
+
+	// cgm, _ = NewSyncMutexMap(Lookup(randomLookup))
+	// test(t, cgm, "sync-mutex")
+	// _ = cgm.Close()
+
+	// cgm, _ = NewSyncAtomicMap(Lookup(randomLookup))
+	// test(t, cgm, "sync-atomic")
+	// _ = cgm.Close()
+
+	// cgm, _ = NewChannelMap(Lookup(randomLookup))
+	// test(t, cgm, "channel")
+	// _ = cgm.Close()
 }
