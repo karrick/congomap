@@ -91,7 +91,7 @@ func (cgm *twoLevelMap) GC() {
 	now := time.Now()
 
 	for key, lv := range cgm.db {
-		if lv.v.Expiry != zeroTime && now.After(lv.v.Expiry) {
+		if lv.v != nil && lv.v.Expiry != zeroTime && now.After(lv.v.Expiry) {
 			delete(cgm.db, key)
 			if cgm.reaper != nil {
 				wg.Add(1)
