@@ -7,7 +7,6 @@ type Congomap interface {
 	Close() error
 	Delete(string)
 	GC()
-	Halt()
 	Keys() []string
 	Load(string) (interface{}, bool)
 	LoadStore(string) (interface{}, error)
@@ -57,10 +56,15 @@ func TTL(duration time.Duration) Setter {
 	}
 }
 
-type expiringValue struct {
-	value  interface{}
-	expiry int64
+// ExpiringValue couples a value with an expiry time for the value. The zero value for time.Time
+// implies no expiry for this value. If the Store or Lookup method return an ExpiringValue then the
+// value will expire with the specified Expiry time.
+type ExpiringValue struct {
+	Value  interface{}
+	Expiry time.Time // zero value means no expiry
 }
+
+var zeroTime time.Time
 
 // ErrNoLookupDefined is returned by LoadStore() method when a key is
 // not found in a Congomap for which there has been no lookup function

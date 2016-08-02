@@ -23,20 +23,19 @@ desired used that one of the other types.
 Creating a `Congomap` is done by calling the instantiation function of
 the desired concrete type.
 
-NOTE: To prevent resource leakage, always call the `Halt` method on a
+NOTE: To prevent resource leakage, always call the `Close` method on a
 `Congomap` after it is no longer needed.
 
-#### NewSyncMutexMap
+#### NewChannelMap
 
-A sync mutex map uses simple read/write mutex primitives from the
-`sync` package. This results in a highly performant way of
-synchronizing reads and writes to the map. This is about seven times
-the performance of the `NewChannelMap` method and is the fastest of
-those tested in this library.
+A channel map is modeled after the Go way of sharing memory: by
+communicating over channels. Reads and writes are serialized by a Go
+routine processing anonymous functions. Not as fast as the other
+methods.
 
 ```Go
-cgm, _ := cmap.NewSyncMutexMap()
-defer cgm.Halt()
+cgm, _ := cmap.NewChannelMap()
+defer cgm.Close()
 ```
 
 #### NewSyncAtomicMap
@@ -48,19 +47,32 @@ of the keys in the map.
 
 ```Go
 cgm,_ := congomap.NewSyncAtomicMap()
-defer cgm.Halt()
+defer cgm.Close()
 ```
 
-#### NewChannelMap
+#### NewSyncMutexMap
 
-A channel map is modeled after the Go way of sharing memory: by
-communicating over channels. Reads and writes are serialized by a Go
-routine processing anonymous functions. Not as fast as the other
-methods.
+A sync mutex map uses simple read/write mutex primitives from the
+`sync` package. This results in a highly performant way of
+synchronizing reads and writes to the map. This is about seven times
+the performance of the `NewChannelMap` method and is the fastest of
+those tested in this library.
 
 ```Go
-cgm, _ := cmap.NewChannelMap()
-defer cgm.Halt()
+cgm, _ := cmap.NewSyncMutexMap()
+defer cgm.Close()
+```
+
+#### NewTwoLevelMap
+
+A two-level map implements the map using a top-level lock that
+guarantees mutual exclusion on adding or removing keys to the map, and
+individual locks for each key, guaranteeing mutual exclusion of tasks
+attempting to mutate or read the value associated with a given key.
+
+```Go
+cgm, _ := cmap.NewTwoLevelMap()
+defer cgm.Close()
 ```
 
 ### Storing values in a Congomap
@@ -101,8 +113,7 @@ lookup := func(key string) (interface{}, error) {
     return someLenghyComputation(key), nil
 }
 
-// Create a Congomap, specifying what the lookup callback function
-// is.
+// Create a Congomap, specifying what the lookup callback function is.
 cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(lookup))
 if err != nil {
     log.Fatal(err)
@@ -127,20 +138,40 @@ if err != nil {
 
 ## Benchmarks
 
-Part of the purpose of this library is to calculate the relative
-performance of these approaches to access to a concurrent map. Here's
-a sample run on my Mac using Go 1.4:
+Part of the purpose of this library is to calculate the relative performance of these approaches to
+access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
 
 ```bash
 go test -bench .
 PASS
-BenchmarkChannelMapLoad	 1000000	      1533 ns/op
-BenchmarkChannelMapLoadStore	 1000000	      1569 ns/op
-BenchmarkSyncAtomicMapLoad	 5000000	       262 ns/op
-BenchmarkSyncAtomicMapLoadTTL	 3000000	       412 ns/op
-BenchmarkSyncAtomicMapLoadStore	10000000	       229 ns/op
-BenchmarkSyncMutexMapLoad	10000000	       197 ns/op
-BenchmarkSyncMutexMapLoadTTL	10000000	       197 ns/op
-BenchmarkSyncMutexMapLoadStore	10000000	       213 ns/op
-ok  	github.com/karrick/congomap	15.676s
+BenchmarkLoadChannelMap-8              	 1000000	      1640 ns/op
+BenchmarkLoadSyncAtomicMap-8           	 5000000	       325 ns/op
+BenchmarkLoadSyncMutexMap-8            	 5000000	       313 ns/op
+BenchmarkLoadTwoLevelMap-8             	 5000000	       353 ns/op
+
+BenchmarkLoadTTLChannelMap-8           	 1000000	      1636 ns/op
+BenchmarkLoadTTLSyncAtomicMap-8        	 5000000	       344 ns/op
+BenchmarkLoadTTLSyncMutexMap-8         	 5000000	       321 ns/op
+BenchmarkLoadTTLTwoLevelMap-8          	 5000000	       352 ns/op
+
+BenchmarkLoadStoreChannelMap-8         	 1000000	      1627 ns/op
+BenchmarkLoadStoreSyncAtomicMap-8      	 5000000	       330 ns/op
+BenchmarkLoadStoreSyncMutexMap-8       	 5000000	       354 ns/op
+BenchmarkLoadStoreTwoLevelMap-8        	 5000000	       354 ns/op
+
+BenchmarkLoadStoreTTLChannelMap-8      	 1000000	      1488 ns/op
+BenchmarkLoadStoreTTLSyncAtomicMap-8   	 5000000	       383 ns/op
+BenchmarkLoadStoreTTLSyncMutexMap-8    	 3000000	       380 ns/op
+BenchmarkLoadStoreTTLTwoLevelMap-8     	 5000000	       375 ns/op
+
+BenchmarkHighConcurrencyChannelMap-8   	    1000	   1698944 ns/op
+BenchmarkHighConcurrencySyncAtomicMap-8	     200	   8634905 ns/op
+BenchmarkHighConcurrencySyncMutexMap-8 	       2	2837190507 ns/op
+BenchmarkHighConcurrencyTwoLevelMap-8  	     100	  13856899 ns/op
+
+BenchmarkSlowLookupsChannelMap-8       	    1000	   1637436 ns/op
+BenchmarkSlowLookupsSyncAtomicMap-8    	     200	  55339569 ns/op
+BenchmarkSlowLookupsSyncMutexMap-8     	     100	  96892213 ns/op
+BenchmarkSlowLookupsTwoLevelMap-8      	     100	  10501782 ns/op
+ok  	github.com/karrick/congomap	107.114s
 ```
