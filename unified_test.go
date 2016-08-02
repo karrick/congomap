@@ -77,7 +77,7 @@ func TestLoadNoTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
-	loadNoTTL(t, cgm, "twoLevel")
+	loadNoTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -103,7 +103,7 @@ func TestLoadBeforeTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Minute))
-	loadBeforeTTL(t, cgm, "twoLevel")
+	loadBeforeTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -130,7 +130,7 @@ func TestLoadAfterTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond))
-	loadAfterTTL(t, cgm, "twoLevel")
+	loadAfterTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -185,7 +185,7 @@ func TestLoadStoreNoLookupNoTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
-	loadStoreNoLookupNoTTL(t, cgm, "twoLevel")
+	loadStoreNoLookupNoTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -213,7 +213,7 @@ func TestLoadStoreFailingLookupNoTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup))
-	loadStoreFailingLookupNoTTL(t, cgm, "twoLevel")
+	loadStoreFailingLookupNoTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -241,7 +241,7 @@ func TestLoadStoreLookupNoTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup))
-	loadStoreLookupNoTTL(t, cgm, "twoLevel")
+	loadStoreLookupNoTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -269,7 +269,7 @@ func TestLoadStoreNoLookupBeforeTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Minute))
-	loadStoreNoLookupBeforeTTL(t, cgm, "twoLevel")
+	loadStoreNoLookupBeforeTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -297,7 +297,7 @@ func TestLoadStoreFailingLookupBeforeTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup), TTL(time.Minute))
-	loadStoreFailingLookupBeforeTTL(t, cgm, "twoLevel")
+	loadStoreFailingLookupBeforeTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -325,7 +325,7 @@ func TestLoadStoreLookupBeforeTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Minute))
-	loadStoreLookupBeforeTTL(t, cgm, "twoLevel")
+	loadStoreLookupBeforeTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -353,7 +353,7 @@ func TestLoadStoreNoLookupAfterTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(TTL(time.Nanosecond))
-	loadStoreNoLookupAfterTTL(t, cgm, "twoLevel")
+	loadStoreNoLookupAfterTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -382,7 +382,7 @@ func TestLoadStoreFailingLookupAfterTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(failingLookup), TTL(time.Nanosecond))
-	loadStoreFailingLookupAfterTTL(t, cgm, "twoLevel")
+	loadStoreFailingLookupAfterTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -411,7 +411,7 @@ func TestLoadStoreLookupAfterTTL(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
-	loadStoreLookupAfterTTL(t, cgm, "twoLevel")
+	loadStoreLookupAfterTTL(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
@@ -451,7 +451,7 @@ func TestPairs(t *testing.T) {
 	_ = cgm.Close()
 
 	cgm, _ = NewTwoLevelMap()
-	test(t, cgm, "twoLevel")
+	test(t, cgm, "two-level")
 	_ = cgm.Close()
 }
 
