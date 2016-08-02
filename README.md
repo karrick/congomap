@@ -133,36 +133,46 @@ access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
 ```bash
 go test -bench .
 PASS
-BenchmarkLoadChannelMap-8                1000000          1640 ns/op
-BenchmarkLoadSyncAtomicMap-8             5000000           325 ns/op
-BenchmarkLoadSyncMutexMap-8              5000000           313 ns/op
-BenchmarkLoadTwoLevelMap-8               5000000           353 ns/op
+BenchmarkLoadChannelMap-8                        	 1000000	      1644 ns/op
+BenchmarkLoadSyncAtomicMap-8                     	 5000000	       326 ns/op
+BenchmarkLoadSyncMutexMap-8                      	 5000000	       314 ns/op
+BenchmarkLoadTwoLevelMap-8                       	 5000000	       355 ns/op
 
-BenchmarkLoadTTLChannelMap-8             1000000          1636 ns/op
-BenchmarkLoadTTLSyncAtomicMap-8          5000000           344 ns/op
-BenchmarkLoadTTLSyncMutexMap-8           5000000           321 ns/op
-BenchmarkLoadTTLTwoLevelMap-8            5000000           352 ns/op
+BenchmarkLoadTTLChannelMap-8                     	 1000000	      1563 ns/op
+BenchmarkLoadTTLSyncAtomicMap-8                  	 5000000	       348 ns/op
+BenchmarkLoadTTLSyncMutexMap-8                   	 5000000	       322 ns/op
+BenchmarkLoadTTLTwoLevelMap-8                    	 5000000	       357 ns/op
 
-BenchmarkLoadStoreChannelMap-8           1000000          1627 ns/op
-BenchmarkLoadStoreSyncAtomicMap-8        5000000           330 ns/op
-BenchmarkLoadStoreSyncMutexMap-8         5000000           354 ns/op
-BenchmarkLoadStoreTwoLevelMap-8          5000000           354 ns/op
+BenchmarkLoadStoreChannelMap-8                   	 1000000	      1643 ns/op
+BenchmarkLoadStoreSyncAtomicMap-8                	 5000000	       323 ns/op
+BenchmarkLoadStoreSyncMutexMap-8                 	 3000000	       351 ns/op
+BenchmarkLoadStoreTwoLevelMap-8                  	 5000000	       363 ns/op
 
-BenchmarkLoadStoreTTLChannelMap-8        1000000          1488 ns/op
-BenchmarkLoadStoreTTLSyncAtomicMap-8     5000000           383 ns/op
-BenchmarkLoadStoreTTLSyncMutexMap-8      3000000           380 ns/op
-BenchmarkLoadStoreTTLTwoLevelMap-8       5000000           375 ns/op
+BenchmarkLoadStoreTTLChannelMap-8                	 1000000	      1452 ns/op
+BenchmarkLoadStoreTTLSyncAtomicMap-8             	 5000000	       388 ns/op
+BenchmarkLoadStoreTTLSyncMutexMap-8              	 5000000	       374 ns/op
+BenchmarkLoadStoreTTLTwoLevelMap-8               	 5000000	       379 ns/op
 
-BenchmarkHighConcurrencyChannelMap-8        1000       1698944 ns/op
-BenchmarkHighConcurrencySyncAtomicMap-8      200       8634905 ns/op
-BenchmarkHighConcurrencySyncMutexMap-8         2	2837190507 ns/op
-BenchmarkHighConcurrencyTwoLevelMap-8        100      13856899 ns/op
+BenchmarkHighConcurrencyFastLookupChannelMap-8   	    1000	   1696277 ns/op
+BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8	     100	  23849153 ns/op
+BenchmarkHighConcurrencyFastLookupSyncMutexMap-8 	       1	1901949630 ns/op
+BenchmarkHighConcurrencyFastLookupTwoLevelMap-8  	      10	 859849259 ns/op
 
-BenchmarkSlowLookupsChannelMap-8            1000       1637436 ns/op
-BenchmarkSlowLookupsSyncAtomicMap-8          200      55339569 ns/op
-BenchmarkSlowLookupsSyncMutexMap-8           100      96892213 ns/op
-BenchmarkSlowLookupsTwoLevelMap-8            100      10501782 ns/op
-ok      github.com/karrick/congomap	107.114s
+BenchmarkHighConcurrencySlowLookupChannelMap-8   	    1000	   1623286 ns/op
+BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8	      20	  91569563 ns/op
+BenchmarkHighConcurrencySlowLookupSyncMutexMap-8 	     100	  36404125 ns/op
+BenchmarkHighConcurrencySlowLookupTwoLevelMap-8  	    5000	   3379887 ns/op
+
+BenchmarkLowConcurrencyFastLookupChannelMap-8    	  100000	     16768 ns/op
+BenchmarkLowConcurrencyFastLookupSyncAtomicMap-8 	    5000	    597813 ns/op
+BenchmarkLowConcurrencyFastLookupSyncMutexMap-8  	  300000	     23472 ns/op
+BenchmarkLowConcurrencyFastLookupTwoLevelMap-8   	  100000	     18847 ns/op
+
+BenchmarkLowConcurrencySlowLookupChannelMap-8    	  100000	     16692 ns/op
+BenchmarkLowConcurrencySlowLookupSyncAtomicMap-8 	    5000	    883376 ns/op
+BenchmarkLowConcurrencySlowLookupSyncMutexMap-8  	  200000	     18199 ns/op
+BenchmarkLowConcurrencySlowLookupTwoLevelMap-8   	  100000	     16219 ns/op
+ok  	github.com/karrick/congomap	161.827s
 ```
 
 Of note is the apparent loser for most of the tests is the `NewChannelMap`. However, those tests are
