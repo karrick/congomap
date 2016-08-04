@@ -91,7 +91,7 @@ func (cgm *twoLevelMap) GC() {
 	now := time.Now()
 
 	for key, lv := range cgm.db {
-		if lv.v != nil && lv.v.Expiry != zeroTime && now.After(lv.v.Expiry) {
+		if lv.v != nil && !lv.v.Expiry.IsZero() && now.After(lv.v.Expiry) {
 			delete(cgm.db, key)
 			if cgm.reaper != nil {
 				wg.Add(1)
@@ -123,7 +123,7 @@ func (cgm *twoLevelMap) Load(key string) (interface{}, bool) {
 	lv.l.Lock()
 	defer lv.l.Unlock()
 
-	if lv.v != nil && (lv.v.Expiry == zeroTime || lv.v.Expiry.After(time.Now())) {
+	if lv.v != nil && (lv.v.Expiry.IsZero() || lv.v.Expiry.After(time.Now())) {
 		return lv.v.Value, true
 	}
 
@@ -146,7 +146,7 @@ func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	defer lv.l.Unlock()
 
 	// value might have been filled by another go-routine
-	if lv.v != nil && (lv.v.Expiry == zeroTime || lv.v.Expiry.After(time.Now())) {
+	if lv.v != nil && (lv.v.Expiry.IsZero() || lv.v.Expiry.After(time.Now())) {
 		return lv.v.Value, nil
 	}
 
@@ -231,7 +231,7 @@ func (cgm *twoLevelMap) Pairs() <-chan *Pair {
 		for i, key := range keys {
 			go func(key string, lv *lockingValue) {
 				lv.l.Lock()
-				if lv.v != nil && (lv.v.Expiry == zeroTime || lv.v.Expiry.After(now)) {
+				if lv.v != nil && (lv.v.Expiry.IsZero() || lv.v.Expiry.After(now)) {
 					pairs <- &Pair{key, lv.v.Value}
 				}
 				lv.l.Unlock()

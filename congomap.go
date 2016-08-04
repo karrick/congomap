@@ -64,8 +64,6 @@ type ExpiringValue struct {
 	Expiry time.Time // zero value means no expiry
 }
 
-var zeroTime time.Time
-
 // ErrNoLookupDefined is returned by LoadStore() method when a key is
 // not found in a Congomap for which there has been no lookup function
 // declared.

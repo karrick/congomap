@@ -91,7 +91,7 @@ func (cgm *syncAtomicMap) GC() {
 // value associated with the key and true. Otherwise it returns nil for the value and false.
 func (cgm *syncAtomicMap) Load(key string) (interface{}, bool) {
 	ev, ok := cgm.db.Load().(map[string]*ExpiringValue)[key]
-	if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+	if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 		return ev.Value, true
 	}
 	return nil, false
@@ -106,7 +106,7 @@ func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 	m1 := cgm.db.Load().(map[string]*ExpiringValue) // load current value of the data structure
 
 	ev, ok := m1[key]
-	if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+	if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 		cgm.dbLock.Unlock()
 		return ev.Value, nil
 	}
@@ -181,7 +181,7 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 		m1 := cgm.db.Load().(map[string]*ExpiringValue) // load current value of the data structure
 		now := time.Now()
 		for k, v := range m1 {
-			if v.Expiry == zeroTime || v.Expiry.After(now) {
+			if v.Expiry.IsZero() || v.Expiry.After(now) {
 				pairs <- &Pair{k, v.Value}
 			}
 		}
@@ -197,21 +197,27 @@ func (cgm *syncAtomicMap) Close() error {
 }
 
 func (cgm *syncAtomicMap) copyNonExpiredData(m1 map[string]*ExpiringValue) map[string]*ExpiringValue {
-	var now time.Time
-	if cgm.ttlEnabled {
-		now = time.Now()
-	}
+	now := time.Now()
 	if m1 == nil {
 		m1 = cgm.db.Load().(map[string]*ExpiringValue) // load current value of the data structure
 	}
 	m2 := make(map[string]*ExpiringValue) // create a new value
+
+	var wg sync.WaitGroup
+
 	for k, v := range m1 {
-		if v.Expiry == zeroTime || v.Expiry.After(now) {
+		if v.Expiry.IsZero() || v.Expiry.After(now) {
 			m2[k] = v // copy non-expired data from the current object to the new one
 		} else if cgm.reaper != nil {
-			cgm.reaper(v.Value)
+			wg.Add(1)
+			go func(value interface{}) {
+				cgm.reaper(value)
+				wg.Done()
+			}(v.Value)
 		}
 	}
+
+	wg.Wait()
 	return m2
 }
 

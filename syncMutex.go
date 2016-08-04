@@ -83,7 +83,7 @@ func (cgm *syncMutexMap) GC() {
 	now := time.Now()
 
 	for key, ev := range cgm.db {
-		if ev.Expiry != zeroTime && now.After(ev.Expiry) {
+		if !ev.Expiry.IsZero() && now.After(ev.Expiry) {
 			delete(cgm.db, key)
 			if cgm.reaper != nil {
 				wg.Add(1)
@@ -107,7 +107,7 @@ func (cgm *syncMutexMap) Load(key string) (interface{}, bool) {
 	ev, ok := cgm.db[key]
 	cgm.dbLock.RUnlock()
 
-	if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+	if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 		return ev.Value, true
 	}
 
@@ -122,7 +122,7 @@ func (cgm *syncMutexMap) LoadStore(key string) (interface{}, error) {
 	defer cgm.dbLock.Unlock()
 
 	ev, ok := cgm.db[key]
-	if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+	if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 		return ev.Value, nil
 	}
 
@@ -200,7 +200,7 @@ func (cgm *syncMutexMap) Pairs() <-chan *Pair {
 
 		for i, key := range keys {
 			go func(key string, ev *ExpiringValue) {
-				if ev.Expiry == zeroTime || ev.Expiry.After(now) {
+				if ev.Expiry.IsZero() || ev.Expiry.After(now) {
 					pairs <- &Pair{key, ev.Value}
 				}
 				wg.Done()

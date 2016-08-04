@@ -84,7 +84,7 @@ func (cgm *channelMap) GC() {
 	cgm.queue <- func() {
 		now := time.Now()
 		for key, ev := range cgm.db {
-			if ev.Expiry != zeroTime && now.After(ev.Expiry) {
+			if !ev.Expiry.IsZero() && now.After(ev.Expiry) {
 				delete(cgm.db, key)
 				if cgm.reaper != nil {
 					wg.Add(1)
@@ -106,7 +106,7 @@ func (cgm *channelMap) Load(key string) (interface{}, bool) {
 	rq := make(chan result)
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
-		if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+		if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 			rq <- result{value: ev.Value, ok: true}
 			return
 		}
@@ -124,7 +124,7 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 	rq := make(chan result)
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
-		if ok && (ev.Expiry == zeroTime || ev.Expiry.After(time.Now())) {
+		if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
 			rq <- result{value: ev.Value, ok: true}
 			return
 		}
@@ -195,7 +195,7 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 	cgm.queue <- func() {
 		now := time.Now()
 		for key, ev := range cgm.db {
-			if ev.Expiry == zeroTime || (ev.Expiry.After(now)) {
+			if ev.Expiry.IsZero() || (ev.Expiry.After(now)) {
 				pairs <- &Pair{key, ev.Value}
 			}
 		}
