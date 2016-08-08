@@ -142,7 +142,7 @@ func (cgm *syncMutexMap) LoadStore(key string) (interface{}, error) {
 		return nil, err
 	}
 
-	cgm.db[key] = cgm.ensureExpiringValue(value)
+	cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
 	return value, nil
 }
 
@@ -161,7 +161,7 @@ func (cgm *syncMutexMap) Store(key string, value interface{}) {
 		}(ev.Value)
 	}
 
-	cgm.db[key] = cgm.ensureExpiringValue(value)
+	cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
 	cgm.dbLock.Unlock()
 	wg.Wait()
 }
@@ -220,25 +220,12 @@ func (cgm *syncMutexMap) Close() error {
 	return nil
 }
 
-func (cgm *syncMutexMap) ensureExpiringValue(value interface{}) *ExpiringValue {
-	switch val := value.(type) {
-	case *ExpiringValue:
-		return val
-	default:
-		if cgm.ttlEnabled {
-			return &ExpiringValue{Value: value, Expiry: time.Now().Add(cgm.ttlDuration)}
-		}
-		return &ExpiringValue{Value: value}
-	}
-}
-
 func (cgm *syncMutexMap) run() {
-	duration := 5 * cgm.ttlDuration
-	if !cgm.ttlEnabled {
-		duration = time.Hour
-	} else if duration < time.Second {
+	duration := 15 * time.Minute
+	if cgm.ttlEnabled && cgm.ttlDuration <= time.Second {
 		duration = time.Minute
 	}
+
 	active := true
 	for active {
 		select {

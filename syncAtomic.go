@@ -129,8 +129,8 @@ func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 	}
 
 	m2 := cgm.copyNonExpiredData(m1)
-	m2[key] = cgm.ensureExpiringValue(value) // do the update that we need
-	cgm.db.Store(m2)                         // atomically replace the current object with the new one
+	m2[key] = newExpiringValue(value, cgm.ttlDuration) // do the update that we need
+	cgm.db.Store(m2)                                   // atomically replace the current object with the new one
 	cgm.dbLock.Unlock()
 
 	return value, nil
@@ -153,8 +153,8 @@ func (cgm *syncAtomicMap) Store(key string, value interface{}) {
 		}(ev.Value)
 	}
 
-	m[key] = cgm.ensureExpiringValue(value) // do the update that we need
-	cgm.db.Store(m)                         // atomically replace the current object with the new one
+	m[key] = newExpiringValue(value, cgm.ttlDuration) // do the update that we need
+	cgm.db.Store(m)                                   // atomically replace the current object with the new one
 	cgm.dbLock.Unlock()
 	wg.Wait()
 }
@@ -221,25 +221,12 @@ func (cgm *syncAtomicMap) copyNonExpiredData(m1 map[string]*ExpiringValue) map[s
 	return m2
 }
 
-func (cgm *syncAtomicMap) ensureExpiringValue(value interface{}) *ExpiringValue {
-	switch val := value.(type) {
-	case *ExpiringValue:
-		return val
-	default:
-		if cgm.ttlEnabled {
-			return &ExpiringValue{Value: value, Expiry: time.Now().Add(cgm.ttlDuration)}
-		}
-		return &ExpiringValue{Value: value}
-	}
-}
-
 func (cgm *syncAtomicMap) run() {
-	var duration time.Duration
-	if !cgm.ttlEnabled {
-		duration = time.Hour
-	} else if duration < time.Second {
+	duration := 15 * time.Minute
+	if cgm.ttlEnabled && cgm.ttlDuration <= time.Second {
 		duration = time.Minute
 	}
+
 	active := true
 	for active {
 		select {

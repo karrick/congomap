@@ -143,7 +143,7 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 			}(ev.Value)
 		}
 
-		cgm.db[key] = cgm.ensureExpiringValue(value)
+		cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
 		rq <- result{value: value, ok: true}
 	}
 	res := <-rq
@@ -166,7 +166,7 @@ func (cgm *channelMap) Store(key string, value interface{}) {
 			}(ev.Value)
 		}
 
-		cgm.db[key] = cgm.ensureExpiringValue(value)
+		cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
 		wg.Done()
 	}
 	wg.Wait()
@@ -216,23 +216,9 @@ type result struct {
 	err   error
 }
 
-func (cgm *channelMap) ensureExpiringValue(value interface{}) *ExpiringValue {
-	switch val := value.(type) {
-	case *ExpiringValue:
-		return val
-	default:
-		if cgm.ttlEnabled {
-			return &ExpiringValue{Value: value, Expiry: time.Now().Add(cgm.ttlDuration)}
-		}
-		return &ExpiringValue{Value: value}
-	}
-}
-
 func (cgm *channelMap) run() {
-	var duration time.Duration
-	if !cgm.ttlEnabled {
-		duration = time.Hour
-	} else if duration < time.Second {
+	duration := 15 * time.Minute
+	if cgm.ttlEnabled && cgm.ttlDuration <= time.Second {
 		duration = time.Minute
 	}
 

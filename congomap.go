@@ -64,6 +64,19 @@ type ExpiringValue struct {
 	Expiry time.Time // zero value means no expiry
 }
 
+// helper function to wrap non ExpiringValue items as ExpiringValue items.
+func newExpiringValue(value interface{}, defaultDuration time.Duration) *ExpiringValue {
+	switch val := value.(type) {
+	case *ExpiringValue:
+		return val
+	default:
+		if defaultDuration > 0 {
+			return &ExpiringValue{Value: value, Expiry: time.Now().Add(defaultDuration)}
+		}
+		return &ExpiringValue{Value: value}
+	}
+}
+
 // ErrNoLookupDefined is returned by LoadStore() method when a key is
 // not found in a Congomap for which there has been no lookup function
 // declared.
