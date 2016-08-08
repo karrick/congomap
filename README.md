@@ -8,12 +8,88 @@ I wrote it to determine which method produced the most readable code, and the mo
 
 [![GoDoc](https://godoc.org/github.com/karrick/congomap?status.svg)](https://godoc.org/github.com/karrick/congomap)
 
+## Benchmarks
+
+Part of the purpose of this library is to calculate the relative performance of these approaches to
+access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3. Note the smaller the value
+in the final column, the better the latency of that particular type of Congomap.
+
+```bash
+go test -bench=Concurrency
+PASS
+BenchmarkHighConcurrencyFastLookupChannelMap-8              1000       1719902 ns/op
+BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8            100      22276241 ns/op
+BenchmarkHighConcurrencyFastLookupSyncMutexMap-8               1	1632581613 ns/op
+BenchmarkHighConcurrencyFastLookupTwoLevelMap-8             3000        507488 ns/op
+
+BenchmarkHighConcurrencySlowLookupChannelMap-8              1000       1625607 ns/op
+BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8             30      60743763 ns/op
+BenchmarkHighConcurrencySlowLookupSyncMutexMap-8             100     202947478 ns/op
+BenchmarkHighConcurrencySlowLookupTwoLevelMap-8             2000        541066 ns/op
+
+BenchmarkLowConcurrencyFastLookupChannelMap-8             100000         16790 ns/op
+BenchmarkLowConcurrencyFastLookupSyncAtomicMap-8            3000        383506 ns/op
+BenchmarkLowConcurrencyFastLookupSyncMutexMap-8            30000         35809 ns/op
+BenchmarkLowConcurrencyFastLookupTwoLevelMap-8            300000          5335 ns/op
+
+BenchmarkLowConcurrencySlowLookupChannelMap-8             100000         17335 ns/op
+BenchmarkLowConcurrencySlowLookupSyncAtomicMap-8            3000        819874 ns/op
+BenchmarkLowConcurrencySlowLookupSyncMutexMap-8            30000         33580 ns/op
+BenchmarkLowConcurrencySlowLookupTwoLevelMap-8            300000          5229 ns/op
+
+ok      github.com/karrick/congomap	187.273s
+```
+
 ## Examples
 
-This library exposes the `Congomap` interface, and three concrete types that adhere to that
-interface. All three concrete types are available here because they have individual performance
-characteristics, where one concrete type may be more appropriate for a desired used that one of the
-other types.
+This library exposes the `Congomap` interface, and concrete types that adhere to that interface. All
+concrete types are available here because they have individual performance characteristics, where
+one concrete type may be more appropriate for a desired used that one of the other types.
+
+### Simple Example
+
+Create a Congomap with optional configuration parameters, then use it to store and load data.
+
+```Go
+    cgm, err := congomap.NewTwoLevelMap(nil)
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
+
+    cgm.Store("someKey", 42)
+
+    value, ok := cgm.Load("anotherKey")
+    if !ok {
+        // key is not in the Congomap
+    }
+    fmt.Println(value)
+```
+
+Optional configuration parameters include Lookup, Reaper, and TTL.
+
+```Go
+    config := &Config{
+        Lookup: func(key string) (interface{}, error) {
+            return 1 + someLengthyComputation(key)
+        },
+        TTL: 5 * time.Minute,
+    }
+
+    cgm, err := congomap.NewTwoLevelMap(config)
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
+
+    cgm.Store("someKey", 42)
+
+    value, ok := cgm.Load("anotherKey")
+    if !ok {
+        // key is not in the Congomap
+    }
+    fmt.Println(value)
+```
 
 ### Creating a Congomap
 
@@ -30,7 +106,7 @@ other methods for low-concurrency loads, this particular map outpaces the compet
 high-concurrency tests.
 
 ```Go
-    cgm, err := cmap.NewChannelMap()
+    cgm, err := congomap.NewChannelMap(nil)
     if err != nil {
         panic(err)
     }
@@ -45,7 +121,7 @@ on the number of the keys in the map. The more keys in the map, the more expensi
 LoadStore will be.
 
 ```Go
-    cgm,_ := congomap.NewSyncAtomicMap()
+    cgm,_ := congomap.NewSyncAtomicMap(nil)
     if err != nil {
         panic(err)
     }
@@ -59,7 +135,7 @@ highly performant way of synchronizing reads and writes to the map. This map is 
 for low-concurrency tests, but takes second or even third place for high-concurrency benchmarks.
 
 ```Go
-    cgm, err := cmap.NewSyncMutexMap()
+    cgm, err := congomap.NewSyncMutexMap(nil)
     if err != nil {
         panic(err)
     }
@@ -73,7 +149,7 @@ or removing keys to the map, and individual locks for each key, guaranteeing mut
 tasks attempting to mutate or read the value associated with a given key.
 
 ```Go
-    cgm, err := cmap.NewTwoLevelMap()
+    cgm, err := congomap.NewTwoLevelMap(nil)
     if err != nil {
         panic(err)
     }
@@ -116,7 +192,7 @@ the returned value is stored in the `Congomap` and returned from `LoadStore`.
     }
 
     // Create a Congomap, specifying what the lookup callback function is.
-    cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(lookup))
+    cgm, err := congomap.NewTwoLevelMap(&congomap.Config{Lookup:lookup})
     if err != nil {
         log.Fatal(err)
     }
@@ -135,35 +211,4 @@ the returned value is stored in the `Congomap` and returned from `LoadStore`.
     if err != nil {
         // lookup function returned an error
     }
-```
-
-## Benchmarks
-
-Part of the purpose of this library is to calculate the relative performance of these approaches to
-access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
-
-```bash
-go test -bench .
-PASS
-BenchmarkHighConcurrencyFastLookupChannelMap-8              1000       1719902 ns/op
-BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8            100      22276241 ns/op
-BenchmarkHighConcurrencyFastLookupSyncMutexMap-8               1	1632581613 ns/op
-BenchmarkHighConcurrencyFastLookupTwoLevelMap-8             3000        507488 ns/op
-
-BenchmarkHighConcurrencySlowLookupChannelMap-8              1000       1625607 ns/op
-BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8             30      60743763 ns/op
-BenchmarkHighConcurrencySlowLookupSyncMutexMap-8             100     202947478 ns/op
-BenchmarkHighConcurrencySlowLookupTwoLevelMap-8             2000        541066 ns/op
-
-BenchmarkLowConcurrencyFastLookupChannelMap-8             100000         16790 ns/op
-BenchmarkLowConcurrencyFastLookupSyncAtomicMap-8            3000        383506 ns/op
-BenchmarkLowConcurrencyFastLookupSyncMutexMap-8            30000         35809 ns/op
-BenchmarkLowConcurrencyFastLookupTwoLevelMap-8            300000          5335 ns/op
-
-BenchmarkLowConcurrencySlowLookupChannelMap-8             100000         17335 ns/op
-BenchmarkLowConcurrencySlowLookupSyncAtomicMap-8            3000        819874 ns/op
-BenchmarkLowConcurrencySlowLookupSyncMutexMap-8            30000         33580 ns/op
-BenchmarkLowConcurrencySlowLookupTwoLevelMap-8            300000          5229 ns/op
-
-ok      github.com/karrick/congomap	187.273s
 ```

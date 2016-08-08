@@ -1,77 +1,47 @@
 package congomap
 
-import (
-	"errors"
-	"time"
-)
+import "errors"
 
-type Template struct {
-	lookup func(string) (interface{}, error)
-	reaper func(interface{})
-
-	ttlEnabled  bool
-	ttlDuration time.Duration
+type TemplateMap struct {
+	config *Config
 }
 
-// Lookup sets the lookup callback function for this Congomap for use when `LoadStore` is called and
-// a requested key is not in the map.
-func (cgm *Template) Lookup(lookup func(string) (interface{}, error)) error {
-	cgm.lookup = lookup
-	return nil
-}
-
-// Reaper is used to specify what function is to be called when garbage collecting item from the
-// Congomap.
-func (cgm *Template) Reaper(reaper func(interface{})) error {
-	cgm.reaper = reaper
-	return nil
-}
-
-// TTL sets the time-to-live for values stored in the Congomap.
-func (cgm *Template) TTL(duration time.Duration) error {
-	if duration <= 0 {
-		return ErrInvalidDuration(duration)
+func NewTemplateMap(config *Config) (*TemplateMap, error) {
+	if config == nil {
+		config = &Config{}
 	}
-	cgm.ttlDuration = duration
-	cgm.ttlEnabled = true
+	return &TemplateMap{config: config}, nil
+}
+
+func (cgm *TemplateMap) Close() error {
 	return nil
 }
 
-////////////////////////////////////////
-
-func TemplateTemplateMap() (*Template, error) {
-	return &Template{}, nil
+func (cgm *TemplateMap) Delete(key string) {
 }
 
-func (cgm *Template) Close() error {
+func (cgm *TemplateMap) GC() {
+}
+
+func (cgm *TemplateMap) Keys() []string {
 	return nil
 }
 
-func (cgm *Template) Delete(key string) {
-}
-
-func (cgm *Template) GC() {
-}
-
-func (cgm *Template) Keys() []string {
-	return nil
-}
-
-func (cgm *Template) Load(key string) (interface{}, bool) {
+func (cgm *TemplateMap) Load(key string) (interface{}, bool) {
 	return nil, false
 }
 
-func (cgm *Template) LoadStore(key string) (interface{}, error) {
+func (cgm *TemplateMap) LoadStore(key string) (interface{}, error) {
 	return nil, errors.New("TODO")
 }
 
-func (cgm *Template) Pairs() <-chan *Pair {
-	ch := make(chan *Pair)
-	go func(ch chan<- *Pair) {
+func (cgm *TemplateMap) Pairs() <-chan Pair {
+	ch := make(chan Pair)
+	go func(ch chan<- Pair) {
 		close(ch)
 	}(ch)
 	return ch
 }
 
-func (cgm *Template) Store(key string, value interface{}) {
+func (cgm *TemplateMap) Store(key string, value interface{}) {
 }

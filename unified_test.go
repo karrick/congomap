@@ -63,22 +63,22 @@ func loadNoTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadWithoutTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap()
+	cgm, _ := NewChannelMap(nil)
 	loadNoTTL(t, cgm, "channel")
 }
 
 func TestLoadWithoutTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap()
+	cgm, _ := NewSyncAtomicMap(nil)
 	loadNoTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadWithoutTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap()
+	cgm, _ := NewSyncMutexMap(nil)
 	loadNoTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadWithoutTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap()
+	cgm, _ := NewTwoLevelMap(nil)
 	loadNoTTL(t, cgm, "twoLevel")
 }
 
@@ -92,22 +92,22 @@ func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadBeforeTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Minute})
 	loadBeforeTTL(t, cgm, "channel")
 }
 
 func TestLoadBeforeTTLSyncAtomic(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Minute})
 	loadBeforeTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadBeforeTTLSyncMutex(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Minute})
 	loadBeforeTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadBeforeTTLTwoLevel(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Minute})
 	loadBeforeTTL(t, cgm, "twoLevel")
 }
 
@@ -122,22 +122,22 @@ func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadAfterTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(TTL(time.Nanosecond))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Nanosecond})
 	loadAfterTTL(t, cgm, "channel")
 }
 
 func TestLoadAfterTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Nanosecond))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Nanosecond})
 	loadAfterTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadAfterTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Nanosecond})
 	loadAfterTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadAfterTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Nanosecond))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Nanosecond})
 	loadAfterTTL(t, cgm, "twoLevel")
 }
 
@@ -184,22 +184,22 @@ func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreNoLookupNoTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap()
+	cgm, _ := NewChannelMap(nil)
 	loadStoreNoLookupNoTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreNoLookupNoTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap()
+	cgm, _ := NewSyncAtomicMap(nil)
 	loadStoreNoLookupNoTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreNoLookupNoTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap()
+	cgm, _ := NewSyncMutexMap(nil)
 	loadStoreNoLookupNoTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreNoLookupNoTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap()
+	cgm, _ := NewTwoLevelMap(nil)
 	loadStoreNoLookupNoTTL(t, cgm, "twoLevel")
 }
 
@@ -213,22 +213,22 @@ func loadStoreFailingLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreFailingLookupNoTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(failingLookup))
+	cgm, _ := NewChannelMap(&Config{Lookup: failingLookup})
 	loadStoreFailingLookupNoTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreFailingLookupNoTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(failingLookup))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: failingLookup})
 	loadStoreFailingLookupNoTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreFailingLookupNoTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: failingLookup})
 	loadStoreFailingLookupNoTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreFailingLookupNoTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(failingLookup))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: failingLookup})
 	loadStoreFailingLookupNoTTL(t, cgm, "twoLevel")
 }
 
@@ -242,22 +242,22 @@ func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreLookupNoTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(succeedingLookup))
+	cgm, _ := NewChannelMap(&Config{Lookup: succeedingLookup})
 	loadStoreLookupNoTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreLookupNoTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(succeedingLookup))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: succeedingLookup})
 	loadStoreLookupNoTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreLookupNoTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: succeedingLookup})
 	loadStoreLookupNoTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreLookupNoTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(succeedingLookup))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: succeedingLookup})
 	loadStoreLookupNoTTL(t, cgm, "twoLevel")
 }
 
@@ -271,22 +271,22 @@ func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreNoLookupBeforeTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Minute})
 	loadStoreNoLookupBeforeTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreNoLookupBeforeTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Minute})
 	loadStoreNoLookupBeforeTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreNoLookupBeforeTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Minute})
 	loadStoreNoLookupBeforeTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreNoLookupBeforeTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Minute})
 	loadStoreNoLookupBeforeTTL(t, cgm, "twoLevel")
 }
 
@@ -300,22 +300,22 @@ func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreFailingLookupBeforeTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(failingLookup), TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{Lookup: failingLookup, TTL: time.Minute})
 	loadStoreFailingLookupBeforeTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreFailingLookupBeforeTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: failingLookup, TTL: time.Minute})
 	loadStoreFailingLookupBeforeTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreFailingLookupBeforeTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: failingLookup, TTL: time.Minute})
 	loadStoreFailingLookupBeforeTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreFailingLookupBeforeTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(failingLookup), TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: failingLookup, TTL: time.Minute})
 	loadStoreFailingLookupBeforeTTL(t, cgm, "twoLevel")
 }
 
@@ -329,22 +329,22 @@ func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreLookupBeforeTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(succeedingLookup), TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{Lookup: succeedingLookup, TTL: time.Minute})
 	loadStoreLookupBeforeTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreLookupBeforeTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: succeedingLookup, TTL: time.Minute})
 	loadStoreLookupBeforeTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreLookupBeforeTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: succeedingLookup, TTL: time.Minute})
 	loadStoreLookupBeforeTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreLookupBeforeTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: succeedingLookup, TTL: time.Minute})
 	loadStoreLookupBeforeTTL(t, cgm, "twoLevel")
 }
 
@@ -358,22 +358,22 @@ func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 	_ = cgm.Close()
 }
 func TestLoadStoreNoLookupAfterTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(TTL(time.Nanosecond))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Nanosecond})
 	loadStoreNoLookupAfterTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreNoLookupAfterTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Nanosecond))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Nanosecond})
 	loadStoreNoLookupAfterTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreNoLookupAfterTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Nanosecond))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Nanosecond})
 	loadStoreNoLookupAfterTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreNoLookupAfterTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Nanosecond))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Nanosecond})
 	loadStoreNoLookupAfterTTL(t, cgm, "twoLevel")
 }
 
@@ -388,22 +388,22 @@ func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreFailingLookupAfterTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewChannelMap(&Config{Lookup: failingLookup, TTL: time.Nanosecond})
 	loadStoreFailingLookupAfterTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreFailingLookupAfterTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: failingLookup, TTL: time.Nanosecond})
 	loadStoreFailingLookupAfterTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreFailingLookupAfterTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: failingLookup, TTL: time.Nanosecond})
 	loadStoreFailingLookupAfterTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreFailingLookupAfterTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(failingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: failingLookup, TTL: time.Nanosecond})
 	loadStoreFailingLookupAfterTTL(t, cgm, "twoLevel")
 }
 
@@ -418,22 +418,22 @@ func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestLoadStoreLookupAfterTTLChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewChannelMap(&Config{Lookup: succeedingLookup, TTL: time.Nanosecond})
 	loadStoreLookupAfterTTL(t, cgm, "channel")
 }
 
 func TestLoadStoreLookupAfterTTLSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: succeedingLookup, TTL: time.Nanosecond})
 	loadStoreLookupAfterTTL(t, cgm, "syncAtomic")
 }
 
 func TestLoadStoreLookupAfterTTLSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: succeedingLookup, TTL: time.Nanosecond})
 	loadStoreLookupAfterTTL(t, cgm, "syncMutex")
 }
 
 func TestLoadStoreLookupAfterTTLTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(succeedingLookup), TTL(time.Nanosecond))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: succeedingLookup, TTL: time.Nanosecond})
 	loadStoreLookupAfterTTL(t, cgm, "twoLevel")
 }
 
@@ -452,22 +452,22 @@ func testPairs(t *testing.T, cgm Congomap, which string) {
 }
 
 func TestPairsChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap()
+	cgm, _ := NewChannelMap(nil)
 	testPairs(t, cgm, "channel")
 }
 
 func TestPairsSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap()
+	cgm, _ := NewSyncAtomicMap(nil)
 	testPairs(t, cgm, "syncAtomic")
 }
 
 func TestPairsSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap()
+	cgm, _ := NewSyncMutexMap(nil)
 	testPairs(t, cgm, "syncMutex")
 }
 
 func TestPairsTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap()
+	cgm, _ := NewTwoLevelMap(nil)
 	testPairs(t, cgm, "twoLevel")
 }
 
@@ -496,25 +496,25 @@ func createReaperTesterInvokeDuringDelete(t *testing.T, wg *sync.WaitGroup) func
 
 func TestReaperInvokedDuringDeleteChannelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewChannelMap(Reaper(createReaper(t, &wg, "channel")))
+	cgm, _ := NewChannelMap(&Config{Reaper: createReaper(t, &wg, "channel")})
 	createReaperTesterInvokeDuringDelete(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringDeleteSyncAtomicMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncAtomicMap(Reaper(createReaper(t, &wg, "syncAtomic")))
+	cgm, _ := NewSyncAtomicMap(&Config{Reaper: createReaper(t, &wg, "syncAtomic")})
 	createReaperTesterInvokeDuringDelete(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringDeleteSyncMutexMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncMutexMap(Reaper(createReaper(t, &wg, "syncMutex")))
+	cgm, _ := NewSyncMutexMap(&Config{Reaper: createReaper(t, &wg, "syncMutex")})
 	createReaperTesterInvokeDuringDelete(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringDeleteTwoLevelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewTwoLevelMap(Reaper(createReaper(t, &wg, "twoLevel")))
+	cgm, _ := NewTwoLevelMap(&Config{Reaper: createReaper(t, &wg, "twoLevel")})
 	createReaperTesterInvokeDuringDelete(t, &wg)(cgm)
 }
 
@@ -534,25 +534,25 @@ func createReaperTesterInvokeDuringGC(t *testing.T, wg *sync.WaitGroup) func(Con
 
 func TestReaperInvokedDuringGCChannelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewChannelMap(Reaper(createReaper(t, &wg, "channel")))
+	cgm, _ := NewChannelMap(&Config{Reaper: createReaper(t, &wg, "channel")})
 	createReaperTesterInvokeDuringGC(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringGCSyncAtomicMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncAtomicMap(Reaper(createReaper(t, &wg, "syncAtomic")))
+	cgm, _ := NewSyncAtomicMap(&Config{Reaper: createReaper(t, &wg, "syncAtomic")})
 	createReaperTesterInvokeDuringGC(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringGCSyncMutexMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncMutexMap(Reaper(createReaper(t, &wg, "syncMutex")))
+	cgm, _ := NewSyncMutexMap(&Config{Reaper: createReaper(t, &wg, "syncMutex")})
 	createReaperTesterInvokeDuringGC(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringGCTwoLevelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewTwoLevelMap(Reaper(createReaper(t, &wg, "twoLevel")))
+	cgm, _ := NewTwoLevelMap(&Config{Reaper: createReaper(t, &wg, "twoLevel")})
 	createReaperTesterInvokeDuringGC(t, &wg)(cgm)
 }
 
@@ -571,24 +571,24 @@ func createReaperTesterInvokeDuringClose(t *testing.T, wg *sync.WaitGroup) func(
 
 func TestReaperInvokedDuringCloseChannelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewChannelMap(Reaper(createReaper(t, &wg, "channel")))
+	cgm, _ := NewChannelMap(&Config{Reaper: createReaper(t, &wg, "channel")})
 	createReaperTesterInvokeDuringClose(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringCloseSyncAtomicMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncAtomicMap(Reaper(createReaper(t, &wg, "syncAtomic")))
+	cgm, _ := NewSyncAtomicMap(&Config{Reaper: createReaper(t, &wg, "syncAtomic")})
 	createReaperTesterInvokeDuringClose(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringCloseSyncMutexMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewSyncMutexMap(Reaper(createReaper(t, &wg, "syncMutex")))
+	cgm, _ := NewSyncMutexMap(&Config{Reaper: createReaper(t, &wg, "syncMutex")})
 	createReaperTesterInvokeDuringClose(t, &wg)(cgm)
 }
 
 func TestReaperInvokedDuringCloseTwoLevelMap(t *testing.T) {
 	var wg sync.WaitGroup
-	cgm, _ := NewTwoLevelMap(Reaper(createReaper(t, &wg, "twoLevel")))
+	cgm, _ := NewTwoLevelMap(&Config{Reaper: createReaper(t, &wg, "twoLevel")})
 	createReaperTesterInvokeDuringClose(t, &wg)(cgm)
 }

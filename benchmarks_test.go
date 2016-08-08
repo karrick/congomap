@@ -98,25 +98,25 @@ func parallelLoadStorers(b *testing.B, cgm Congomap) {
 // Load
 
 func BenchmarkLoadChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap()
+	cgm, _ := NewChannelMap(nil)
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap()
+	cgm, _ := NewSyncAtomicMap(nil)
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap()
+	cgm, _ := NewSyncMutexMap(nil)
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap()
+	cgm, _ := NewTwoLevelMap(nil)
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
@@ -124,25 +124,25 @@ func BenchmarkLoadTwoLevelMap(b *testing.B) {
 // LoadTTL
 
 func BenchmarkLoadTTLChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(TTL(time.Second))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadTTLSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Second))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadTTLSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Second))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
 
 func BenchmarkLoadTTLTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Second))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoaders(b, cgm)
 }
@@ -150,25 +150,25 @@ func BenchmarkLoadTTLTwoLevelMap(b *testing.B) {
 // LoadStore
 
 func BenchmarkLoadStoreChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap()
+	cgm, _ := NewChannelMap(nil)
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap()
+	cgm, _ := NewSyncAtomicMap(nil)
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap()
+	cgm, _ := NewSyncMutexMap(nil)
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap()
+	cgm, _ := NewTwoLevelMap(nil)
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
@@ -176,25 +176,25 @@ func BenchmarkLoadStoreTwoLevelMap(b *testing.B) {
 // LoadStoreTTL
 
 func BenchmarkLoadStoreTTLChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(TTL(time.Second))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreTTLSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Second))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreTTLSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Second))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
 
 func BenchmarkLoadStoreTTLTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Second))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Second})
 	defer cgm.Close()
 	parallelLoadStorers(b, cgm)
 }
@@ -263,25 +263,25 @@ func randomSlowLookup(_ string) (interface{}, error) {
 // High Concurrency
 
 func BenchmarkHighConcurrencyFastLookupChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencyFastLookupSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencyFastLookupSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencyFastLookupTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
@@ -289,25 +289,25 @@ func BenchmarkHighConcurrencyFastLookupTwoLevelMap(b *testing.B) {
 // lookup takes random time
 
 func BenchmarkHighConcurrencySlowLookupChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(Lookup(randomSlowLookup))
+	cgm, _ := NewChannelMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencySlowLookupSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(Lookup(randomSlowLookup))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencySlowLookupSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(Lookup(randomSlowLookup))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
 
 func BenchmarkHighConcurrencySlowLookupTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(Lookup(randomSlowLookup))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 1000)
 }
@@ -315,25 +315,25 @@ func BenchmarkHighConcurrencySlowLookupTwoLevelMap(b *testing.B) {
 // Low Concurrency
 
 func BenchmarkLowConcurrencyFastLookupChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(TTL(time.Minute))
+	cgm, _ := NewChannelMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencyFastLookupSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(TTL(time.Minute))
+	cgm, _ := NewSyncAtomicMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencyFastLookupSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(TTL(time.Minute))
+	cgm, _ := NewSyncMutexMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencyFastLookupTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(TTL(time.Minute))
+	cgm, _ := NewTwoLevelMap(&Config{TTL: time.Minute})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
@@ -341,25 +341,77 @@ func BenchmarkLowConcurrencyFastLookupTwoLevelMap(b *testing.B) {
 // lookup takes random time
 
 func BenchmarkLowConcurrencySlowLookupChannelMap(b *testing.B) {
-	cgm, _ := NewChannelMap(Lookup(randomSlowLookup))
+	cgm, _ := NewChannelMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencySlowLookupSyncAtomicMap(b *testing.B) {
-	cgm, _ := NewSyncAtomicMap(Lookup(randomSlowLookup))
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencySlowLookupSyncMutexMap(b *testing.B) {
-	cgm, _ := NewSyncMutexMap(Lookup(randomSlowLookup))
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
 }
 
 func BenchmarkLowConcurrencySlowLookupTwoLevelMap(b *testing.B) {
-	cgm, _ := NewTwoLevelMap(Lookup(randomSlowLookup))
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: randomSlowLookup})
 	defer cgm.Close()
 	benchmark(b, cgm, 1, 1, 10)
+}
+
+//
+
+func benchmarkHighContention(cgm Congomap) {
+	const tasks = 1000
+	keys := []string{"just", "a", "few", "keys", "to", "force", "lock", "contention"}
+
+	var wg sync.WaitGroup
+	wg.Add(tasks)
+
+	for i := 0; i < tasks; i++ {
+		go func(cgm Congomap, wg *sync.WaitGroup, keys []string) {
+			const iterations = 1000
+
+			for j := 0; j < iterations; j++ {
+				key := keys[rand.Intn(len(keys))]
+				if j%4 == 0 {
+					cgm.Delete(key)
+				} else {
+					_, _ = cgm.LoadStore(key)
+				}
+			}
+			wg.Done()
+		}(cgm, &wg, keys)
+	}
+
+	wg.Wait()
+}
+
+func BenchmarkHighContentionChannelMap(b *testing.B) {
+	cgm, _ := NewChannelMap(&Config{Lookup: randomFailOnLookup, TTL: time.Second})
+	benchmarkHighContention(cgm)
+	defer cgm.Close()
+}
+
+func BenchmarkHighContentionSyncAtomicMap(b *testing.B) {
+	cgm, _ := NewSyncAtomicMap(&Config{Lookup: randomFailOnLookup, TTL: time.Second})
+	benchmarkHighContention(cgm)
+	defer cgm.Close()
+}
+
+func BenchmarkHighContentionSyncMutexMap(b *testing.B) {
+	cgm, _ := NewSyncMutexMap(&Config{Lookup: randomFailOnLookup, TTL: time.Second})
+	benchmarkHighContention(cgm)
+	defer cgm.Close()
+}
+
+func BenchmarkHighContentionTwoLevelMap(b *testing.B) {
+	cgm, _ := NewTwoLevelMap(&Config{Lookup: randomFailOnLookup, TTL: time.Second})
+	benchmarkHighContention(cgm)
+	defer cgm.Close()
 }
