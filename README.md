@@ -30,8 +30,11 @@ other methods for low-concurrency loads, this particular map outpaces the compet
 high-concurrency tests.
 
 ```Go
-cgm, _ := cmap.NewChannelMap()
-defer cgm.Close()
+    cgm, err := cmap.NewChannelMap()
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
 ```
 
 #### NewSyncAtomicMap
@@ -42,8 +45,11 @@ on the number of the keys in the map. The more keys in the map, the more expensi
 LoadStore will be.
 
 ```Go
-cgm,_ := congomap.NewSyncAtomicMap()
-defer cgm.Close()
+    cgm,_ := congomap.NewSyncAtomicMap()
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
 ```
 
 #### NewSyncMutexMap
@@ -53,8 +59,11 @@ highly performant way of synchronizing reads and writes to the map. This map is 
 for low-concurrency tests, but takes second or even third place for high-concurrency benchmarks.
 
 ```Go
-cgm, _ := cmap.NewSyncMutexMap()
-defer cgm.Close()
+    cgm, err := cmap.NewSyncMutexMap()
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
 ```
 
 #### NewTwoLevelMap
@@ -64,8 +73,11 @@ or removing keys to the map, and individual locks for each key, guaranteeing mut
 tasks attempting to mutate or read the value associated with a given key.
 
 ```Go
-cgm, _ := cmap.NewTwoLevelMap()
-defer cgm.Close()
+    cgm, err := cmap.NewTwoLevelMap()
+    if err != nil {
+        panic(err)
+    }
+    defer cgm.Close()
 ```
 
 ### Storing values in a Congomap
@@ -73,9 +85,9 @@ defer cgm.Close()
 Storing key value pairs in a `Congomap` is done with the Store method.
 
 ```Go
-cgm.Store("someKey", 42)
-cgm.Store("someOtherKey", struct{}{})
-cgm.Store("yetAnotherKey", make(chan interface{}))
+    cgm.Store("someKey", 42)
+    cgm.Store("someOtherKey", struct{}{})
+    cgm.Store("yetAnotherKey", make(chan interface{}))
 ```
 
 ### Loading values from a Congomap
@@ -83,10 +95,10 @@ cgm.Store("yetAnotherKey", make(chan interface{}))
 Loading values already stored in a `Congomap` is done with the Load method.
 
 ```Go
-value, ok := cgm.Load("someKey")
-if !ok {
-    // key is not in the Congomap
-}
+    value, ok := cgm.Load("someKey")
+    if !ok {
+        // key is not in the Congomap
+    }
 ```
 
 ### Lazy Lookups using LoadStore
@@ -97,32 +109,32 @@ value and the error is returned from `LoadStore`. If the callback function retur
 the returned value is stored in the `Congomap` and returned from `LoadStore`.
 
 ```Go
-// Define a lookup function to be invoked when LoadStore is called for a key not stored in the
-// Congomap.
-lookup := func(key string) (interface{}, error) {
-    return someLenghyComputation(key), nil
-}
+    // Define a lookup function to be invoked when LoadStore is called for a key not stored in the
+    // Congomap.
+    lookup := func(key string) (interface{}, error) {
+        return someLenghyComputation(key), nil
+    }
 
-// Create a Congomap, specifying what the lookup callback function is.
-cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(lookup))
-if err != nil {
-    log.Fatal(err)
-}
+    // Create a Congomap, specifying what the lookup callback function is.
+    cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(lookup))
+    if err != nil {
+        log.Fatal(err)
+    }
 
-// You can still use the regular Load and Store functions, which will not invoke the lookup
-// function.
-cgm.Store("someKey", 42)
-value, ok := cgm.Load("someKey")
-if !ok {
-    // key is not in the Congomap
-}
+    // You can still use the regular Load and Store functions, which will not invoke the lookup
+    // function.
+    cgm.Store("someKey", 42)
+    value, ok := cgm.Load("someKey")
+    if !ok {
+        // key is not in the Congomap
+    }
 
-// When you use the LoadStore function, and the key is not in the Congomap, the lookup funciton is
-// invoked, and the return value is stored in the Congomap and returned to the program.
-value, err := cgm.LoadStore("someKey")
-if err != nil {
-    // lookup functio returned an error
-}
+    // When you use the LoadStore function, and the key is not in the Congomap, the lookup funciton is
+    // invoked, and the return value is stored in the Congomap and returned to the program.
+    value, err := cgm.LoadStore("someKey")
+    if err != nil {
+        // lookup function returned an error
+    }
 ```
 
 ## Benchmarks
@@ -133,49 +145,49 @@ access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
 ```bash
 go test -bench .
 PASS
-BenchmarkLoadChannelMap-8                           	 1000000	      1698 ns/op
-BenchmarkLoadSyncAtomicMap-8                        	 5000000	       331 ns/op
-BenchmarkLoadSyncMutexMap-8                         	 5000000	       313 ns/op
-BenchmarkLoadTwoLevelMap-8                          	 5000000	       357 ns/op
-BenchmarkLoadTwoLevelPrimeMap-8                     	 5000000	       355 ns/op
+BenchmarkLoadChannelMap-8                                1000000          1698 ns/op
+BenchmarkLoadSyncAtomicMap-8                             5000000           331 ns/op
+BenchmarkLoadSyncMutexMap-8                              5000000           313 ns/op
+BenchmarkLoadTwoLevelMap-8                               5000000           357 ns/op
+BenchmarkLoadTwoLevelPrimeMap-8                          5000000           355 ns/op
 
-BenchmarkLoadTTLChannelMap-8                        	 1000000	      1588 ns/op
-BenchmarkLoadTTLSyncAtomicMap-8                     	 5000000	       352 ns/op
-BenchmarkLoadTTLSyncMutexMap-8                      	 5000000	       316 ns/op
-BenchmarkLoadTTLTwoLevelMap-8                       	 5000000	       354 ns/op
-BenchmarkLoadTTLTwoLevelPrimeMap-8                  	 5000000	       357 ns/op
+BenchmarkLoadTTLChannelMap-8                             1000000          1588 ns/op
+BenchmarkLoadTTLSyncAtomicMap-8                          5000000           352 ns/op
+BenchmarkLoadTTLSyncMutexMap-8                           5000000           316 ns/op
+BenchmarkLoadTTLTwoLevelMap-8                            5000000           354 ns/op
+BenchmarkLoadTTLTwoLevelPrimeMap-8                       5000000           357 ns/op
 
-BenchmarkLoadStoreChannelMap-8                      	 1000000	      1632 ns/op
-BenchmarkLoadStoreSyncAtomicMap-8                   	 5000000	       330 ns/op
-BenchmarkLoadStoreSyncMutexMap-8                    	 5000000	       352 ns/op
-BenchmarkLoadStoreTwoLevelMap-8                     	 5000000	       359 ns/op
-BenchmarkLoadStoreTwoLevelPrimeMap-8                	 5000000	       357 ns/op
+BenchmarkLoadStoreChannelMap-8                           1000000          1632 ns/op
+BenchmarkLoadStoreSyncAtomicMap-8                        5000000           330 ns/op
+BenchmarkLoadStoreSyncMutexMap-8                         5000000           352 ns/op
+BenchmarkLoadStoreTwoLevelMap-8                          5000000           359 ns/op
+BenchmarkLoadStoreTwoLevelPrimeMap-8                     5000000           357 ns/op
 
-BenchmarkLoadStoreTTLChannelMap-8                   	 1000000	      1492 ns/op
-BenchmarkLoadStoreTTLSyncAtomicMap-8                	 5000000	       379 ns/op
-BenchmarkLoadStoreTTLSyncMutexMap-8                 	 5000000	       376 ns/op
-BenchmarkLoadStoreTTLTwoLevelMap-8                  	 5000000	       359 ns/op
-BenchmarkLoadStoreTTLTwoLevelPrimeMap-8             	 5000000	       378 ns/op
+BenchmarkLoadStoreTTLChannelMap-8                        1000000          1492 ns/op
+BenchmarkLoadStoreTTLSyncAtomicMap-8                     5000000           379 ns/op
+BenchmarkLoadStoreTTLSyncMutexMap-8                      5000000           376 ns/op
+BenchmarkLoadStoreTTLTwoLevelMap-8                       5000000           359 ns/op
+BenchmarkLoadStoreTTLTwoLevelPrimeMap-8                  5000000           378 ns/op
 
-BenchmarkHighConcurrencyFastLookupChannelMap-8      	    1000	   1719902 ns/op
-BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8   	     100	  22276241 ns/op
-BenchmarkHighConcurrencyFastLookupSyncMutexMap-8    	       1	1632581613 ns/op
-BenchmarkHighConcurrencyFastLookupTwoLevelMap-8     	    3000	    507488 ns/op
+BenchmarkHighConcurrencyFastLookupChannelMap-8              1000       1719902 ns/op
+BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8            100      22276241 ns/op
+BenchmarkHighConcurrencyFastLookupSyncMutexMap-8               1	1632581613 ns/op
+BenchmarkHighConcurrencyFastLookupTwoLevelMap-8             3000        507488 ns/op
 
-BenchmarkHighConcurrencySlowLookupChannelMap-8      	    1000	   1625607 ns/op
-BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8   	      30	  60743763 ns/op
-BenchmarkHighConcurrencySlowLookupSyncMutexMap-8    	     100	 202947478 ns/op
-BenchmarkHighConcurrencySlowLookupTwoLevelMap-8     	    2000	    541066 ns/op
+BenchmarkHighConcurrencySlowLookupChannelMap-8              1000       1625607 ns/op
+BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8             30      60743763 ns/op
+BenchmarkHighConcurrencySlowLookupSyncMutexMap-8             100     202947478 ns/op
+BenchmarkHighConcurrencySlowLookupTwoLevelMap-8             2000        541066 ns/op
 
-BenchmarkLowConcurrencyFastLookupChannelMap-8       	  100000	     16790 ns/op
-BenchmarkLowConcurrencyFastLookupSyncAtomicMap-8    	    3000	    383506 ns/op
-BenchmarkLowConcurrencyFastLookupSyncMutexMap-8     	   30000	     35809 ns/op
-BenchmarkLowConcurrencyFastLookupTwoLevelMap-8      	  300000	      5335 ns/op
+BenchmarkLowConcurrencyFastLookupChannelMap-8             100000         16790 ns/op
+BenchmarkLowConcurrencyFastLookupSyncAtomicMap-8            3000        383506 ns/op
+BenchmarkLowConcurrencyFastLookupSyncMutexMap-8            30000         35809 ns/op
+BenchmarkLowConcurrencyFastLookupTwoLevelMap-8            300000          5335 ns/op
 
-BenchmarkLowConcurrencySlowLookupChannelMap-8       	  100000	     17335 ns/op
-BenchmarkLowConcurrencySlowLookupSyncAtomicMap-8    	    3000	    819874 ns/op
-BenchmarkLowConcurrencySlowLookupSyncMutexMap-8     	   30000	     33580 ns/op
-BenchmarkLowConcurrencySlowLookupTwoLevelMap-8      	  300000	      5229 ns/op
+BenchmarkLowConcurrencySlowLookupChannelMap-8             100000         17335 ns/op
+BenchmarkLowConcurrencySlowLookupSyncAtomicMap-8            3000        819874 ns/op
+BenchmarkLowConcurrencySlowLookupSyncMutexMap-8            30000         33580 ns/op
+BenchmarkLowConcurrencySlowLookupTwoLevelMap-8            300000          5229 ns/op
 
-ok  	github.com/karrick/congomap	187.273s
+ok      github.com/karrick/congomap	187.273s
 ```
