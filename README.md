@@ -145,30 +145,6 @@ access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
 ```bash
 go test -bench .
 PASS
-BenchmarkLoadChannelMap-8                                1000000          1698 ns/op
-BenchmarkLoadSyncAtomicMap-8                             5000000           331 ns/op
-BenchmarkLoadSyncMutexMap-8                              5000000           313 ns/op
-BenchmarkLoadTwoLevelMap-8                               5000000           357 ns/op
-BenchmarkLoadTwoLevelPrimeMap-8                          5000000           355 ns/op
-
-BenchmarkLoadTTLChannelMap-8                             1000000          1588 ns/op
-BenchmarkLoadTTLSyncAtomicMap-8                          5000000           352 ns/op
-BenchmarkLoadTTLSyncMutexMap-8                           5000000           316 ns/op
-BenchmarkLoadTTLTwoLevelMap-8                            5000000           354 ns/op
-BenchmarkLoadTTLTwoLevelPrimeMap-8                       5000000           357 ns/op
-
-BenchmarkLoadStoreChannelMap-8                           1000000          1632 ns/op
-BenchmarkLoadStoreSyncAtomicMap-8                        5000000           330 ns/op
-BenchmarkLoadStoreSyncMutexMap-8                         5000000           352 ns/op
-BenchmarkLoadStoreTwoLevelMap-8                          5000000           359 ns/op
-BenchmarkLoadStoreTwoLevelPrimeMap-8                     5000000           357 ns/op
-
-BenchmarkLoadStoreTTLChannelMap-8                        1000000          1492 ns/op
-BenchmarkLoadStoreTTLSyncAtomicMap-8                     5000000           379 ns/op
-BenchmarkLoadStoreTTLSyncMutexMap-8                      5000000           376 ns/op
-BenchmarkLoadStoreTTLTwoLevelMap-8                       5000000           359 ns/op
-BenchmarkLoadStoreTTLTwoLevelPrimeMap-8                  5000000           378 ns/op
-
 BenchmarkHighConcurrencyFastLookupChannelMap-8              1000       1719902 ns/op
 BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8            100      22276241 ns/op
 BenchmarkHighConcurrencyFastLookupSyncMutexMap-8               1	1632581613 ns/op
