@@ -1,15 +1,17 @@
 // +build race
 
-package congomap
+package congomap_test
 
 import (
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/karrick/congomap"
 )
 
-func testRace(t *testing.T, cgm Congomap) {
+func testRace(t *testing.T, cgm congomap.Congomap) {
 	defer cgm.Close()
 
 	const tasks = 1000
@@ -19,7 +21,7 @@ func testRace(t *testing.T, cgm Congomap) {
 	wg.Add(tasks)
 
 	for i := 0; i < tasks; i++ {
-		go func(cgm Congomap, wg *sync.WaitGroup, keys []string) {
+		go func() {
 			const iterations = 1000
 
 			for j := 0; j < iterations; j++ {
@@ -31,28 +33,28 @@ func testRace(t *testing.T, cgm Congomap) {
 				}
 			}
 			wg.Done()
-		}(cgm, &wg, keys)
+		}()
 	}
 
 	wg.Wait()
 }
 
 func TestRaceChannelMap(t *testing.T) {
-	cgm, _ := NewChannelMap(Lookup(randomFailOnLookup), TTL(time.Second))
+	cgm, _ := congomap.NewChannelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
 	testRace(t, cgm)
 }
 
 func TestRaceSyncAtomicMap(t *testing.T) {
-	cgm, _ := NewSyncAtomicMap(Lookup(randomFailOnLookup), TTL(time.Second))
+	cgm, _ := congomap.NewSyncAtomicMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
 	testRace(t, cgm)
 }
 
 func TestRaceSyncMutexMap(t *testing.T) {
-	cgm, _ := NewSyncMutexMap(Lookup(randomFailOnLookup), TTL(time.Second))
+	cgm, _ := congomap.NewSyncMutexMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
 	testRace(t, cgm)
 }
 
 func TestRaceTwoLevelMap(t *testing.T) {
-	cgm, _ := NewTwoLevelMap(Lookup(randomFailOnLookup), TTL(time.Second))
+	cgm, _ := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
 	testRace(t, cgm)
 }

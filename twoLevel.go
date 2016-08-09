@@ -29,7 +29,7 @@ type lockingValue struct {
 // Note that it is important to call the Close method on the returned data structure when it's no
 // longer needed to free CPU and channel resources back to the runtime.
 //
-//	cgm, err := cmap.NewTwoLevelMap()
+//	cgm, err := congomap.NewTwoLevelMap()
 //	if err != nil {
 //	    panic(err)
 //	}

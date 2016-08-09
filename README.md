@@ -19,7 +19,7 @@ WARNING: To prevent resource leakage, always call the `Close` method on a `Congo
 longer needed.
 
 ```Go
-    cgm, err := cmap.NewTwoLevelMap()
+    cgm, err := congomap.NewTwoLevelMap()
     if err != nil {
         panic(err)
     }
@@ -44,7 +44,7 @@ functions, Lookup functions, and default TTL values is provided by godoc.
 
 ## Customizable Features
 
-### Lookup
+### Lazy Loading with Lookup callback
 
 All Congomaps support providing a custom Lookup callback function that the Congomap invokes to
 lookup the value of a key not yet present in the data store when the LoadStore method is
@@ -55,7 +55,7 @@ requests. If the Lookup instead returns an error, no value is stored in the Cong
 
 See the example provided in godoc for more information on taking advantage of this feature.
 
-### Reaper
+### Expiration Notification with Reaper callback
 
 All Congomaps support providing a custom Reaper callback function that the Congomap invokes when a
 value is expired from the data store, either by exceeding its TTL or by being replaced with another
@@ -67,7 +67,7 @@ repeatedly with each value that was stored in the Congomap.
 
 See the example provided in godoc for more information on taking advantage of this feature.
 
-### TTL
+### Default entry Time-to-Live (TTL)
 
 All Congomaps support providing a default time-to-live for values stored in the Congomap. If *not*
 provided, items stored in the Congomap will remain there until expired by being superceded by the
