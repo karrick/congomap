@@ -10,6 +10,8 @@ import (
 )
 
 func testRace(t *testing.T, cgm Congomap) {
+	defer cgm.Close()
+
 	const tasks = 1000
 	keys := []string{"just", "a", "few", "keys", "to", "force", "lock", "contention"}
 
@@ -38,23 +40,19 @@ func testRace(t *testing.T, cgm Congomap) {
 func TestRaceChannelMap(t *testing.T) {
 	cgm, _ := NewChannelMap(Lookup(randomFailOnLookup), TTL(time.Second))
 	testRace(t, cgm)
-	defer cgm.Close()
 }
 
 func TestRaceSyncAtomicMap(t *testing.T) {
 	cgm, _ := NewSyncAtomicMap(Lookup(randomFailOnLookup), TTL(time.Second))
 	testRace(t, cgm)
-	defer cgm.Close()
 }
 
 func TestRaceSyncMutexMap(t *testing.T) {
 	cgm, _ := NewSyncMutexMap(Lookup(randomFailOnLookup), TTL(time.Second))
 	testRace(t, cgm)
-	defer cgm.Close()
 }
 
 func TestRaceTwoLevelMap(t *testing.T) {
 	cgm, _ := NewTwoLevelMap(Lookup(randomFailOnLookup), TTL(time.Second))
 	testRace(t, cgm)
-	defer cgm.Close()
 }
