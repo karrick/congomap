@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -809,6 +810,8 @@ func ExampleTwoLevelMap_Keys() {
 
 	cgm.Store("abc", 123)
 	cgm.Store("def", 456)
-	fmt.Println(cgm.Keys())
+	keys := cgm.Keys()
+	sort.Strings(keys)
+	fmt.Println(keys)
 	// Output: [abc def]
 }
