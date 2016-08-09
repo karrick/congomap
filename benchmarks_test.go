@@ -245,7 +245,7 @@ func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, lo
 }
 
 func randomSlowLookup(_ string) (interface{}, error) {
-	delay := 25*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond
+	delay := 50*time.Millisecond + time.Duration(rand.Intn(100))*time.Millisecond
 	time.Sleep(delay)
 	return 42, nil
 }

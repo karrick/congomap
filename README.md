@@ -121,7 +121,7 @@ Congomap object, whereas low concurrency refers to just over 10 go routines all 
 to a single Congomap object.
 
 Fast lookups means the Lookup function immediately responds. Slow lookups means the Lookup function
-slept 50 ± 25 ms before returning.
+slept 100 ± 50 ms before returning.
 
 ```bash
 go test -bench .  PASS BenchmarkHighConcurrencyFastLookupChannelMap-8 1000 1719902 ns/op
