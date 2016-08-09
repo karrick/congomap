@@ -13,14 +13,19 @@ type channelMap struct {
 	lookup func(string) (interface{}, error)
 	reaper func(interface{})
 
-	ttlEnabled  bool
-	ttlDuration time.Duration
+	ttl time.Duration
 }
 
-// NewChannelMap returns a map that uses channels to serialize
-// access. Note that it is important to call the Halt method on the
-// returned data structure when it's no longer needed to free CPU and
-// channel resources back to the runtime.
+// NewChannelMap returns a map that uses channels to serialize access.
+//
+// Note that it is important to call the Close method on the returned data structure when it's no
+// longer needed to free CPU and channel resources back to the runtime.
+//
+//	cgm, err := cmap.NewChannelMap()
+//	if err != nil {
+//	    panic(err)
+//	}
+//	defer cgm.Close()
 func NewChannelMap(setters ...Setter) (Congomap, error) {
 	cgm := &channelMap{
 		db:    make(map[string]*ExpiringValue),
@@ -41,31 +46,24 @@ func NewChannelMap(setters ...Setter) (Congomap, error) {
 	return cgm, nil
 }
 
-// Lookup sets the lookup callback function for this Congomap for use
-// when `LoadStore` is called and a requested key is not in the map.
 func (cgm *channelMap) Lookup(lookup func(string) (interface{}, error)) error {
 	cgm.lookup = lookup
 	return nil
 }
 
-// Reaper is used to specify what function is to be called when
-// garbage collecting item from the Congomap.
 func (cgm *channelMap) Reaper(reaper func(interface{})) error {
 	cgm.reaper = reaper
 	return nil
 }
 
-// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *channelMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
 	}
-	cgm.ttlDuration = duration
-	cgm.ttlEnabled = true
+	cgm.ttl = duration
 	return nil
 }
 
-// Delete removes a key value pair from a Congomap.
 func (cgm *channelMap) Delete(key string) {
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
@@ -76,8 +74,6 @@ func (cgm *channelMap) Delete(key string) {
 	}
 }
 
-// GC forces elimination of keys in Congomap with values that have
-// expired.
 func (cgm *channelMap) GC() {
 	var wg sync.WaitGroup
 
@@ -99,9 +95,6 @@ func (cgm *channelMap) GC() {
 	wg.Wait()
 }
 
-// Load gets the value associated with the given key. When the key is
-// in the map, it returns the value associated with the key and
-// true. Otherwise it returns nil for the value and false.
 func (cgm *channelMap) Load(key string) (interface{}, bool) {
 	rq := make(chan result)
 	cgm.queue <- func() {
@@ -116,9 +109,6 @@ func (cgm *channelMap) Load(key string) (interface{}, bool) {
 	return res.value, res.ok
 }
 
-// LoadStore gets the value associated with the given key if it's in
-// the map. If it's not in the map, it calls the lookup function, and
-// sets the value in the map to that returned by the lookup function.
 func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 	var wg sync.WaitGroup
 	rq := make(chan result)
@@ -143,7 +133,7 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 			}(ev.Value)
 		}
 
-		cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
+		cgm.db[key] = newExpiringValue(value, cgm.ttl)
 		rq <- result{value: value, ok: true}
 	}
 	res := <-rq
@@ -151,7 +141,6 @@ func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
 	return res.value, res.err
 }
 
-// Store sets the value associated with the given key.
 func (cgm *channelMap) Store(key string, value interface{}) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -166,13 +155,12 @@ func (cgm *channelMap) Store(key string, value interface{}) {
 			}(ev.Value)
 		}
 
-		cgm.db[key] = newExpiringValue(value, cgm.ttlDuration)
+		cgm.db[key] = newExpiringValue(value, cgm.ttl)
 		wg.Done()
 	}
 	wg.Wait()
 }
 
-// Keys returns an array of key values stored in the map.
 func (cgm channelMap) Keys() []string {
 	var wg sync.WaitGroup
 	keys := make([]string, 0, len(cgm.db))
@@ -187,9 +175,6 @@ func (cgm channelMap) Keys() []string {
 	return keys
 }
 
-// Pairs returns a channel through which key value pairs are
-// read. Pairs will lock the Congomap so that no other accessors can
-// be used until the returned channel is closed.
 func (cgm *channelMap) Pairs() <-chan *Pair {
 	pairs := make(chan *Pair)
 	cgm.queue <- func() {
@@ -204,7 +189,6 @@ func (cgm *channelMap) Pairs() <-chan *Pair {
 	return pairs
 }
 
-// Close releases resources used by the Congomap.
 func (cgm *channelMap) Close() error {
 	close(cgm.halt)
 	return nil
@@ -217,9 +201,9 @@ type result struct {
 }
 
 func (cgm *channelMap) run() {
-	duration := 15 * time.Minute
-	if cgm.ttlEnabled && cgm.ttlDuration <= time.Second {
-		duration = time.Minute
+	gcPeriodicity := 15 * time.Minute
+	if cgm.ttl > 0 && cgm.ttl <= time.Second {
+		gcPeriodicity = time.Minute
 	}
 
 	active := true
@@ -227,7 +211,7 @@ func (cgm *channelMap) run() {
 		select {
 		case fn := <-cgm.queue:
 			fn()
-		case <-time.After(duration):
+		case <-time.After(gcPeriodicity):
 			cgm.GC()
 		case <-cgm.halt:
 			active = false

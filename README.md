@@ -8,69 +8,15 @@ I wrote it to determine which method produced the most readable code, and the mo
 
 [![GoDoc](https://godoc.org/github.com/karrick/congomap?status.svg)](https://godoc.org/github.com/karrick/congomap)
 
-## Examples
+## Example
 
-This library exposes the `Congomap` interface, and three concrete types that adhere to that
-interface. All three concrete types are available here because they have individual performance
-characteristics, where one concrete type may be more appropriate for a desired used that one of the
-other types.
+This library exposes the `Congomap` interface, and a few concrete types that adhere to that
+interface. All provided concrete types are available here because they have individual performance
+characteristics, where one concrete type may be more appropriate for a desired use case than one of
+the other types.
 
-### Creating a Congomap
-
-Creating a `Congomap` is done by calling the instantiation function of the desired concrete type.
-
-NOTE: To prevent resource leakage, always call the `Close` method on a `Congomap` after it is no
+WARNING: To prevent resource leakage, always call the `Close` method on a `Congomap` after it is no
 longer needed.
-
-#### NewChannelMap
-
-A channel map is modeled after the Go way of sharing memory: by communicating over channels. Reads
-and writes are serialized by a Go routine processing anonymous functions. While not as fast as the
-other methods for low-concurrency loads, this particular map outpaces the competition in
-high-concurrency tests.
-
-```Go
-    cgm, err := cmap.NewChannelMap()
-    if err != nil {
-        panic(err)
-    }
-    defer cgm.Close()
-```
-
-#### NewSyncAtomicMap
-
-A sync atomic map uses the algorithm suggested in the documentation for `sync/atomic`. It is
-designed for when a map is read many, many more times than it is written. Performance also depends
-on the number of the keys in the map. The more keys in the map, the more expensive Store and
-LoadStore will be.
-
-```Go
-    cgm,_ := congomap.NewSyncAtomicMap()
-    if err != nil {
-        panic(err)
-    }
-    defer cgm.Close()
-```
-
-#### NewSyncMutexMap
-
-A sync mutex map uses simple read/write mutex primitives from the `sync` package. This results in a
-highly performant way of synchronizing reads and writes to the map. This map is one of the fastest
-for low-concurrency tests, but takes second or even third place for high-concurrency benchmarks.
-
-```Go
-    cgm, err := cmap.NewSyncMutexMap()
-    if err != nil {
-        panic(err)
-    }
-    defer cgm.Close()
-```
-
-#### NewTwoLevelMap
-
-A two-level map implements the map using a top-level lock that guarantees mutual exclusion on adding
-or removing keys to the map, and individual locks for each key, guaranteeing mutual exclusion of
-tasks attempting to mutate or read the value associated with a given key.
 
 ```Go
     cgm, err := cmap.NewTwoLevelMap()
@@ -78,77 +24,111 @@ tasks attempting to mutate or read the value associated with a given key.
         panic(err)
     }
     defer cgm.Close()
-```
 
-### Storing values in a Congomap
-
-Storing key value pairs in a `Congomap` is done with the Store method.
-
-```Go
-    cgm.Store("someKey", 42)
-    cgm.Store("someOtherKey", struct{}{})
+    // you can store any Go type in a Congomap
+    cgm.Store("someKeyString", 42)
+    cgm.Store("anotherKey", struct{}{})
     cgm.Store("yetAnotherKey", make(chan interface{}))
-```
 
-### Loading values from a Congomap
-
-Loading values already stored in a `Congomap` is done with the Load method.
-
-```Go
-    value, ok := cgm.Load("someKey")
+    // but when you retrieve it, you are responsible to perform type assertions
+    key := "yetAnotherKey"
+    value, ok := cgm.Load(key)
     if !ok {
-        // key is not in the Congomap
+        panic(fmt.Errorf("cannot find %q", key))
     }
+    value = value.(chan interface{})
 ```
 
-### Lazy Lookups using LoadStore
+Additional documentation on creating other types of Congomaps, and how to customize them with Reaper
+functions, Lookup functions, and default TTL values is provided by godoc.
 
-Some maps are used as a lazy lookup device. When a key is not already found in the map, the callback
-function is invoked with the specified key. If the callback function returns an error, then a nil
-value and the error is returned from `LoadStore`. If the callback function returns no error, then
-the returned value is stored in the `Congomap` and returned from `LoadStore`.
+## Customizable Features
 
-```Go
-    // Define a lookup function to be invoked when LoadStore is called for a key not stored in the
-    // Congomap.
-    lookup := func(key string) (interface{}, error) {
-        return someLenghyComputation(key), nil
-    }
+### Lookup
 
-    // Create a Congomap, specifying what the lookup callback function is.
-    cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(lookup))
-    if err != nil {
-        log.Fatal(err)
-    }
+All Congomaps support providing a custom Lookup callback function that the Congomap invokes to
+lookup the value of a key not yet present in the data store when the LoadStore method is
+invoked. This is useful when you want to load a value for a key from the Congomap, but perhaps the
+value has yet to be stored. Congomap then invokes the Lookup function with the key string as its
+argument, then stores the return value of the Lookup function in the Congomap for future
+requests. If the Lookup instead returns an error, no value is stored in the Congomap.
 
-    // You can still use the regular Load and Store functions, which will not invoke the lookup
-    // function.
-    cgm.Store("someKey", 42)
-    value, ok := cgm.Load("someKey")
-    if !ok {
-        // key is not in the Congomap
-    }
+See the example provided in godoc for more information on taking advantage of this feature.
 
-    // When you use the LoadStore function, and the key is not in the Congomap, the lookup funciton is
-    // invoked, and the return value is stored in the Congomap and returned to the program.
-    value, err := cgm.LoadStore("someKey")
-    if err != nil {
-        // lookup function returned an error
-    }
-```
+### Reaper
+
+All Congomaps support providing a custom Reaper callback function that the Congomap invokes when a
+value is expired from the data store, either by exceeding its TTL or by being replaced with another
+value during a Store operation. This is useful when your program needs to perform some sort of
+cleanup on the feature that was in the Congomap.
+
+Note that when the Congomap is closed, if a Reaper callback function is provided, it will be called
+repeatedly with each value that was stored in the Congomap.
+
+See the example provided in godoc for more information on taking advantage of this feature.
+
+### TTL
+
+All Congomaps support providing a default time-to-live for values stored in the Congomap. If *not*
+provided, items stored in the Congomap will remain there until expired by being superceded by the
+Store operation. If a default TTL *is* provided, then items will expire and must be refetched.
+
+Note that whether or not a custom TTL is provided when creating a Congomap, if the Store method or
+customized Lookup callback function ever return a pointer to an ExpringValue object, the default TTL
+is ignored and the item will expire when the ExpiringValue's Expiry passes. If the ExpiringValue's
+Expiry is the zero time, then this data item will not auto-expire from the data store.
+
+See the example provided in godoc for more information on taking advantage of this feature.
+
+## Provided Concrete Congomap Types
+
+### NewChannelMap
+
+A channel map is modeled after the Go way of sharing memory: by communicating over channels. Reads
+and writes are serialized by a Go routine processing anonymous functions. While not as fast as the
+other methods for low-concurrency loads, this particular map outpaces the competition in
+high-concurrency tests.
+
+### NewSyncAtomicMap
+
+A sync atomic map uses the algorithm suggested in the documentation for `sync/atomic`. It is
+designed for when a map is read many, many more times than it is written. Performance also depends
+on the number of the keys in the map. The more keys in the map, the more expensive Store and
+LoadStore will be.
+
+### NewSyncMutexMap
+
+A sync mutex map uses simple read/write mutex primitives from the `sync` package. This results in a
+highly performant way of synchronizing reads and writes to the map. This map is one of the fastest
+for low-concurrency tests, but takes second or even third place for high-concurrency benchmarks.
+
+### NewTwoLevelMap
+
+A two-level map implements the map using a top-level lock that guarantees mutual exclusion on adding
+or removing keys to the map, and individual locks for each key, guaranteeing mutual exclusion of
+tasks attempting to mutate or read the value associated with a given key.
 
 ## Benchmarks
 
-Part of the purpose of this library is to calculate the relative performance of these approaches to
-access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3:
+The initial motivation of creating this library was to calculate the relative performance of these
+approaches to access to a concurrent map. Here's a sample run on my Mac using Go 1.6.3.
+
+For these benchmarks, each Congomap is pre-loaded with 2500 key-value pairs, and each competing go
+routine must make 1000 mutations to the data store.
+
+High concurrency benchmarks just over 1000 competing go routines all making changes to a single
+Congomap object, whereas low concurrency refers to just over 10 go routines all making 1000 changes
+to a single Congomap object.
+
+Fast lookups means the Lookup function immediately responds. Slow lookups means the Lookup function
+slept 50 ± 25 ms before returning.
 
 ```bash
-go test -bench .
-PASS
-BenchmarkHighConcurrencyFastLookupChannelMap-8              1000       1719902 ns/op
-BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8            100      22276241 ns/op
-BenchmarkHighConcurrencyFastLookupSyncMutexMap-8               1	1632581613 ns/op
-BenchmarkHighConcurrencyFastLookupTwoLevelMap-8             3000        507488 ns/op
+go test -bench .  PASS BenchmarkHighConcurrencyFastLookupChannelMap-8 1000 1719902 ns/op
+
+BenchmarkHighConcurrencyFastLookupSyncAtomicMap-8 100 22276241 ns/op
+BenchmarkHighConcurrencyFastLookupSyncMutexMap-8 1 1632581613 ns/op
+BenchmarkHighConcurrencyFastLookupTwoLevelMap-8 3000 507488 ns/op
 
 BenchmarkHighConcurrencySlowLookupChannelMap-8              1000       1625607 ns/op
 BenchmarkHighConcurrencySlowLookupSyncAtomicMap-8             30      60743763 ns/op

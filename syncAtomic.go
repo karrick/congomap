@@ -13,13 +13,25 @@ type syncAtomicMap struct {
 	halt   chan struct{}
 	lookup func(string) (interface{}, error)
 	reaper func(interface{})
-
-	ttlEnabled  bool
-	ttlDuration time.Duration
+	ttl    time.Duration
 }
 
-// NewSyncAtomicMap returns a map that uses sync/atomic.Value to serialize
-// access.
+// NewSyncAtomicMap returns a map that uses atomic.Value to serialize access, using a copy-on-write
+// method of atomically updating the data store.
+//
+// Because write speeds are O(n) based on the size of the keys in this Congomap, this type of
+// Congomap is particularly well suited for scenarios with a very large read to write ratio, and a
+// small corpus of keys in the Congomap. This type of Congomap also uses a mutex to guard all
+// mutations to the data store.
+//
+// Note that it is important to call the Close method on the returned data structure when it's no
+// longer needed to free CPU and channel resources back to the runtime.
+//
+//	cgm,_ := congomap.NewSyncAtomicMap()
+//	if err != nil {
+//	    panic(err)
+//	}
+//	defer cgm.Close()
 func NewSyncAtomicMap(setters ...Setter) (Congomap, error) {
 	cgm := &syncAtomicMap{halt: make(chan struct{})}
 	cgm.db.Store(make(map[string]*ExpiringValue))
@@ -37,58 +49,44 @@ func NewSyncAtomicMap(setters ...Setter) (Congomap, error) {
 	return cgm, nil
 }
 
-// Lookup sets the lookup callback function for this Congomap for use
-// when `LoadStore` is called and a requested key is not in the map.
 func (cgm *syncAtomicMap) Lookup(lookup func(string) (interface{}, error)) error {
 	cgm.lookup = lookup
 	return nil
 }
 
-// Reaper is used to specify what function is to be called when
-// garbage collecting item from the Congomap.
 func (cgm *syncAtomicMap) Reaper(reaper func(interface{})) error {
 	cgm.reaper = reaper
 	return nil
 }
 
-// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *syncAtomicMap) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
 	}
-	cgm.ttlDuration = duration
-	cgm.ttlEnabled = true
+	cgm.ttl = duration
 	return nil
 }
 
-// Delete removes a key value pair from a Congomap.
 func (cgm *syncAtomicMap) Delete(key string) {
-	cgm.dbLock.Lock() // synchronize with other potential writers
+	cgm.dbLock.Lock()
 	m := cgm.copyNonExpiredData(nil)
 	if cgm.reaper != nil {
 		if ev, ok := m[key]; ok {
 			cgm.reaper(ev.Value)
 		}
 	}
-	delete(m, key)  // remove the specified item
-	cgm.db.Store(m) // atomically replace the current object with the new one
-	// At this point all new readers start working with the new version.
-	// The old version will be garbage collected once the existing readers
-	// (if any) are done with it.
+	delete(m, key)
+	cgm.db.Store(m)
 	cgm.dbLock.Unlock()
 }
 
-// GC forces elimination of keys in Congomap with values that have
-// expired.
 func (cgm *syncAtomicMap) GC() {
 	cgm.dbLock.Lock()
 	m := cgm.copyNonExpiredData(nil)
-	cgm.db.Store(m) // atomically replace the current object with the new one
+	cgm.db.Store(m)
 	cgm.dbLock.Unlock()
 }
 
-// Load gets the value associated with the given key. When the key is in the map, it returns the
-// value associated with the key and true. Otherwise it returns nil for the value and false.
 func (cgm *syncAtomicMap) Load(key string) (interface{}, bool) {
 	ev, ok := cgm.db.Load().(map[string]*ExpiringValue)[key]
 	if ok && (ev.Expiry.IsZero() || ev.Expiry.After(time.Now())) {
@@ -97,9 +95,6 @@ func (cgm *syncAtomicMap) Load(key string) (interface{}, bool) {
 	return nil, false
 }
 
-// LoadStore gets the value associated with the given key if it's in the map. If it's not in the
-// map, it calls the lookup function, and sets the value in the map to that returned by the lookup
-// function.
 func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 	cgm.dbLock.Lock() // synchronize with other potential writers
 
@@ -129,16 +124,15 @@ func (cgm *syncAtomicMap) LoadStore(key string) (interface{}, error) {
 	}
 
 	m2 := cgm.copyNonExpiredData(m1)
-	m2[key] = newExpiringValue(value, cgm.ttlDuration) // do the update that we need
-	cgm.db.Store(m2)                                   // atomically replace the current object with the new one
+	m2[key] = newExpiringValue(value, cgm.ttl)
+	cgm.db.Store(m2)
 	cgm.dbLock.Unlock()
 
 	return value, nil
 }
 
-// Store sets the value associated with the given key.
 func (cgm *syncAtomicMap) Store(key string, value interface{}) {
-	cgm.dbLock.Lock() // synchronize with other potential writers
+	cgm.dbLock.Lock()
 
 	m := cgm.copyNonExpiredData(nil)
 
@@ -153,13 +147,12 @@ func (cgm *syncAtomicMap) Store(key string, value interface{}) {
 		}(ev.Value)
 	}
 
-	m[key] = newExpiringValue(value, cgm.ttlDuration) // do the update that we need
-	cgm.db.Store(m)                                   // atomically replace the current object with the new one
+	m[key] = newExpiringValue(value, cgm.ttl)
+	cgm.db.Store(m)
 	cgm.dbLock.Unlock()
 	wg.Wait()
 }
 
-// Keys returns an array of key values stored in the map.
 func (cgm *syncAtomicMap) Keys() []string {
 	var keys []string
 	m1 := cgm.db.Load().(map[string]*ExpiringValue) // load current value of the data structure
@@ -169,9 +162,6 @@ func (cgm *syncAtomicMap) Keys() []string {
 	return keys
 }
 
-// Pairs returns a channel through which key value pairs are
-// read. Pairs will lock the Congomap so that no other accessors can
-// be used until the returned channel is closed.
 func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 	pairs := make(chan *Pair)
 	go func(pairs chan<- *Pair) {
@@ -190,7 +180,6 @@ func (cgm *syncAtomicMap) Pairs() <-chan *Pair {
 	return pairs
 }
 
-// Close releases resources used by the Congomap.
 func (cgm *syncAtomicMap) Close() error {
 	close(cgm.halt)
 	return nil
@@ -222,20 +211,21 @@ func (cgm *syncAtomicMap) copyNonExpiredData(m1 map[string]*ExpiringValue) map[s
 }
 
 func (cgm *syncAtomicMap) run() {
-	duration := 15 * time.Minute
-	if cgm.ttlEnabled && cgm.ttlDuration <= time.Second {
-		duration = time.Minute
+	gcPeriodicity := 15 * time.Minute
+	if cgm.ttl > 0 && cgm.ttl <= time.Second {
+		gcPeriodicity = time.Minute
 	}
 
 	active := true
 	for active {
 		select {
-		case <-time.After(duration):
+		case <-time.After(gcPeriodicity):
 			cgm.GC()
 		case <-cgm.halt:
 			active = false
 		}
 	}
+
 	if cgm.reaper != nil {
 		m1 := cgm.db.Load().(map[string]*ExpiringValue) // load current value of the data structure
 		var wg sync.WaitGroup

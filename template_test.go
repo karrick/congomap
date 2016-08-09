@@ -8,36 +8,26 @@ import (
 type Template struct {
 	lookup func(string) (interface{}, error)
 	reaper func(interface{})
-
-	ttlEnabled  bool
-	ttlDuration time.Duration
+	ttl    time.Duration
 }
 
-// Lookup sets the lookup callback function for this Congomap for use when `LoadStore` is called and
-// a requested key is not in the map.
 func (cgm *Template) Lookup(lookup func(string) (interface{}, error)) error {
 	cgm.lookup = lookup
 	return nil
 }
 
-// Reaper is used to specify what function is to be called when garbage collecting item from the
-// Congomap.
 func (cgm *Template) Reaper(reaper func(interface{})) error {
 	cgm.reaper = reaper
 	return nil
 }
 
-// TTL sets the time-to-live for values stored in the Congomap.
 func (cgm *Template) TTL(duration time.Duration) error {
 	if duration <= 0 {
 		return ErrInvalidDuration(duration)
 	}
-	cgm.ttlDuration = duration
-	cgm.ttlEnabled = true
+	cgm.ttl = duration
 	return nil
 }
-
-////////////////////////////////////////
 
 func TemplateTemplateMap() (*Template, error) {
 	return &Template{}, nil
