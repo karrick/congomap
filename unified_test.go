@@ -56,10 +56,10 @@ func loadValueTrue(t *testing.T, cgm Congomap, which, key string) {
 // LoadWithoutTTL
 
 func loadNoTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadNilFalse(t, cgm, which, "miss")
 	loadValueTrue(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadWithoutTTLChannelMap(t *testing.T) {
@@ -85,10 +85,10 @@ func TestLoadWithoutTTLTwoLevelMap(t *testing.T) {
 // LoadBeforeTTL
 
 func loadBeforeTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadNilFalse(t, cgm, which, "miss")
 	loadValueTrue(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadBeforeTTLChannelMap(t *testing.T) {
@@ -114,11 +114,11 @@ func TestLoadBeforeTTLTwoLevel(t *testing.T) {
 // LoadAfterTTL
 
 func loadAfterTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadNilFalse(t, cgm, which, "miss")
 	loadNilFalse(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadAfterTTLChannelMap(t *testing.T) {
@@ -177,10 +177,10 @@ func loadStoreValueNil(t *testing.T, cgm Congomap, which, key string) {
 // LoadStoreNoLookupNoTTL
 
 func loadStoreNoLookupNoTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreNoLookupNoTTLChannelMap(t *testing.T) {
@@ -206,10 +206,10 @@ func TestLoadStoreNoLookupNoTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupNoTTL
 
 func loadStoreFailingLookupNoTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreFailingLookupNoTTLChannelMap(t *testing.T) {
@@ -235,10 +235,10 @@ func TestLoadStoreFailingLookupNoTTLTwoLevelMap(t *testing.T) {
 // LoadStoreLookupNoTTL
 
 func loadStoreLookupNoTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreLookupNoTTLChannelMap(t *testing.T) {
@@ -264,10 +264,10 @@ func TestLoadStoreLookupNoTTLTwoLevelMap(t *testing.T) {
 // LoadStoreNoLookupBeforeTTL
 
 func loadStoreNoLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreNoLookupBeforeTTLChannelMap(t *testing.T) {
@@ -293,10 +293,10 @@ func TestLoadStoreNoLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupBeforeTTL
 
 func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreFailingLookupBeforeTTLChannelMap(t *testing.T) {
@@ -322,10 +322,10 @@ func TestLoadStoreFailingLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreLookupBeforeTTL
 
 func loadStoreLookupBeforeTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreLookupBeforeTTLChannelMap(t *testing.T) {
@@ -351,12 +351,13 @@ func TestLoadStoreLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreNoLookupAfterTTL
 
 func loadStoreNoLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
+
 func TestLoadStoreNoLookupAfterTTLChannelMap(t *testing.T) {
 	cgm, _ := NewChannelMap(TTL(time.Nanosecond))
 	loadStoreNoLookupAfterTTL(t, cgm, "channel")
@@ -380,11 +381,11 @@ func TestLoadStoreNoLookupAfterTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupAfterTTL
 
 func loadStoreFailingLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreNilErrLookupFailed(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreFailingLookupAfterTTLChannelMap(t *testing.T) {
@@ -410,11 +411,11 @@ func TestLoadStoreFailingLookupAfterTTLTwoLevelMap(t *testing.T) {
 // LoadStoreLookupAfterTTL
 
 func loadStoreLookupAfterTTL(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
-	_ = cgm.Close()
 }
 
 func TestLoadStoreLookupAfterTTLChannelMap(t *testing.T) {
@@ -441,6 +442,7 @@ func TestLoadStoreLookupAfterTTLTwoLevelMap(t *testing.T) {
 // Pairs()
 
 func testPairs(t *testing.T, cgm Congomap, which string) {
+	defer cgm.Close()
 	cgm.Store("first", "Clark")
 	cgm.Store("last", "Kent")
 	for pair := range cgm.Pairs() {
@@ -448,7 +450,6 @@ func testPairs(t *testing.T, cgm Congomap, which string) {
 			t.Errorf("Actual: %#v; Expected: %#v", ok, true)
 		}
 	}
-	_ = cgm.Close()
 }
 
 func TestPairsChannelMap(t *testing.T) {
