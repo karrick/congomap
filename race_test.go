@@ -29,7 +29,7 @@ func testRace(t *testing.T, cgm congomap.Congomap) {
 				if j%4 == 0 {
 					cgm.Delete(key)
 				} else {
-					_, _ = cgm.LoadStore(key)
+					cgm.LoadStore(key)
 				}
 			}
 			wg.Done()
@@ -40,21 +40,33 @@ func testRace(t *testing.T, cgm congomap.Congomap) {
 }
 
 func TestRaceChannelMap(t *testing.T) {
-	cgm, _ := congomap.NewChannelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	cgm, err := congomap.NewChannelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testRace(t, cgm)
 }
 
 func TestRaceSyncAtomicMap(t *testing.T) {
-	cgm, _ := congomap.NewSyncAtomicMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	cgm, err := congomap.NewSyncAtomicMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testRace(t, cgm)
 }
 
 func TestRaceSyncMutexMap(t *testing.T) {
-	cgm, _ := congomap.NewSyncMutexMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testRace(t, cgm)
 }
 
 func TestRaceTwoLevelMap(t *testing.T) {
-	cgm, _ := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testRace(t, cgm)
 }
