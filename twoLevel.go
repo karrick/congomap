@@ -159,12 +159,13 @@ func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	lv.l.Lock()
 	defer lv.l.Unlock()
 
-	// value might have been filled by another go-routine
+	// while waiting for lock, value might have been filled by another go-routine
 	if lv.ev != nil && (lv.ev.Expiry.IsZero() || lv.ev.Expiry.After(time.Now())) {
 		return lv.ev.Value, nil
 	}
 
 	var wg sync.WaitGroup
+	defer wg.Wait()
 	if ok && cgm.reaper != nil {
 		wg.Add(1)
 		go func(value interface{}) {
@@ -180,7 +181,6 @@ func (cgm *twoLevelMap) LoadStore(key string) (interface{}, error) {
 	}
 
 	lv.ev = newExpiringValue(value, cgm.ttl)
-	wg.Wait()
 	return value, nil
 }
 
