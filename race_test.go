@@ -29,7 +29,7 @@ func testRace(t *testing.T, cgm congomap.Congomap) {
 				if j%4 == 0 {
 					cgm.Delete(key)
 				} else {
-					cgm.LoadStore(key)
+					_, _ = cgm.LoadStore(key)
 				}
 			}
 			wg.Done()

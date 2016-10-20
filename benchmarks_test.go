@@ -82,7 +82,7 @@ func parallelLoaders(b *testing.B, cgm congomap.Congomap) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			cgm.Load(randomKey())
+			_, _ = cgm.Load(randomKey())
 		}
 	})
 }
@@ -93,7 +93,7 @@ func parallelLoadStorers(b *testing.B, cgm congomap.Congomap) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			cgm.LoadStore(randomKey())
+			_, _ = cgm.LoadStore(randomKey())
 		}
 	})
 }
@@ -248,7 +248,7 @@ func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, lo
 	for i := 0; i < loaderCount; i++ {
 		go func() {
 			for stop.Load() == nil {
-				cgm.Load(randomKey())
+				_, _ = cgm.Load(randomKey())
 			}
 			wg.Done()
 		}()
@@ -268,7 +268,7 @@ func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, lo
 	for i := 0; i < loadStorerCount; i++ {
 		go func() {
 			for stop.Load() == nil {
-				cgm.LoadStore(randomKey())
+				_, _ = cgm.LoadStore(randomKey())
 			}
 			wg.Done()
 		}()
@@ -277,7 +277,7 @@ func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, lo
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cgm.LoadStore(randomKey())
+		_, _ = cgm.LoadStore(randomKey())
 	}
 
 	stop.Store(struct{}{})
@@ -479,7 +479,7 @@ func benchmarkHighContention(cgm congomap.Congomap) {
 				if j%4 == 0 {
 					cgm.Delete(keys[rand.Intn(len(keys))])
 				} else {
-					cgm.LoadStore(keys[rand.Intn(len(keys))])
+					_, _ = cgm.LoadStore(keys[rand.Intn(len(keys))])
 				}
 			}
 
