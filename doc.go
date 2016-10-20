@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 /*
-Concurrent Go Map
+Package congomap provides a concurrency-safe Go Map.
 
 This repository serves as a set of examples for making maps that are accessible in concurrent Go
 software. The types can be used as a library, each with their own performance characteristics, but
