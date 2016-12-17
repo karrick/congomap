@@ -70,3 +70,14 @@ func TestRaceTwoLevelMap(t *testing.T) {
 	}
 	testRace(t, cgm)
 }
+
+func TestRaceRefreshingCache(t *testing.T) {
+	cgm, err := congomap.NewRefreshingCache(&congomap.RefreshingCacheConfig{
+		Lookup:             randomFailOnLookup,
+		GoodExpiryDuration: time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testRace(t, cgm)
+}

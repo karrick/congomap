@@ -460,6 +460,14 @@ func BenchmarkLowConcurrencySlowLookupTwoLevelMap(b *testing.B) {
 	benchmark(b, cgm, 1, 1, 10)
 }
 
+func BenchmarkLowConcurrencySlowLookupRefreshingCache(b *testing.B) {
+	cgm, err := congomap.NewRefreshingCache(&congomap.RefreshingCacheConfig{Lookup: randomSlowLookup})
+	if err != nil {
+		b.Fatal(err)
+	}
+	benchmark(b, cgm, 1, 1, 10)
+}
+
 // High Contention
 
 func benchmarkHighContention(cgm congomap.Congomap) {
@@ -516,6 +524,29 @@ func BenchmarkHighContentionSyncMutexMap(b *testing.B) {
 
 func BenchmarkHighContentionTwoLevelMap(b *testing.B) {
 	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
+	if err != nil {
+		b.Fatal(err)
+	}
+	benchmarkHighContention(cgm)
+}
+
+func BenchmarkHighContentionRefreshingCache(b *testing.B) {
+	cgm, err := congomap.NewRefreshingCache(&congomap.RefreshingCacheConfig{
+		Lookup:             randomFailOnLookup,
+		GoodExpiryDuration: time.Second,
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	benchmarkHighContention(cgm)
+}
+
+func BenchmarkHighContentionRefreshingCacheWithStale(b *testing.B) {
+	cgm, err := congomap.NewRefreshingCache(&congomap.RefreshingCacheConfig{
+		Lookup:             randomFailOnLookup,
+		GoodStaleDuration:  time.Second,
+		GoodExpiryDuration: time.Second * 4,
+	})
 	if err != nil {
 		b.Fatal(err)
 	}

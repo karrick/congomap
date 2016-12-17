@@ -1,6 +1,7 @@
 package congomap
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -148,12 +149,49 @@ func (rc *RefreshingCache) ensureTopLevelThenAcquire(key string, callback func(*
 	return callback(ltv)
 }
 
-// Close() error
-// Delete(string)
-// GC()
-// Keys() []string
-// Load(string) (interface{}, bool)
-// Pairs() <-chan *Pair
-// Lookup(func(string) (interface{}, error)) error
-// Reaper(func(interface{})) error
-// TTL(time.Duration) error
+func (rc *RefreshingCache) Close() error {
+	return nil
+}
+
+func (rc *RefreshingCache) Delete(key string) {
+	rc.dbLock.RLock()
+	_, ok := rc.db[key]
+	rc.dbLock.RUnlock()
+	if !ok {
+		return
+	}
+
+	rc.dbLock.Lock()
+	delete(rc.db, key)
+	rc.dbLock.Unlock()
+}
+
+func (rc *RefreshingCache) GC() {
+}
+
+func (rc *RefreshingCache) Keys() []string {
+	return nil
+}
+
+func (rc *RefreshingCache) Load(string) (interface{}, bool) {
+	return nil, false
+}
+
+func (rc *RefreshingCache) Pairs() <-chan *Pair {
+	ch := make(chan *Pair)
+	close(ch)
+	return ch
+}
+
+func (rc *RefreshingCache) Lookup(lookup func(string) (interface{}, error)) error {
+	rc.Config.Lookup = lookup
+	return nil
+}
+
+func (rc *RefreshingCache) Reaper(func(interface{})) error {
+	return errors.New("TODO")
+}
+
+func (rc *RefreshingCache) TTL(time.Duration) error {
+	return errors.New("TODO")
+}
