@@ -81,11 +81,7 @@ func (rc *RefreshingCache) LoadStore(key string) (interface{}, error) {
 				rc.fetch(key, ltv)
 			} else if ltv.tv.Stale.IsZero() || now.After(ltv.tv.Stale) {
 				// NOTE: following immediately blocks until this method's deferred unlock executes
-				go func(key string, ltv *lockingTimedValue) {
-					ltv.lock.Lock()
-					rc.fetch(key, ltv)
-					ltv.lock.Unlock()
-				}(key, ltv)
+				go rc.maybeFetch(key, ltv)
 			}
 			return ltv.tv.Value, ltv.tv.Err
 		}
@@ -96,14 +92,26 @@ func (rc *RefreshingCache) LoadStore(key string) (interface{}, error) {
 			rc.fetch(key, ltv)
 		} else if !ltv.tv.Stale.IsZero() && now.After(ltv.tv.Stale) {
 			// NOTE: following immediately blocks until this method's deferred unlock executes
-			go func(key string, ltv *lockingTimedValue) {
-				ltv.lock.Lock()
-				rc.fetch(key, ltv)
-				ltv.lock.Unlock()
-			}(key, ltv)
+			go rc.maybeFetch(key, ltv)
 		}
 		return ltv.tv.Value, ltv.tv.Err
 	})
+}
+
+func (rc *RefreshingCache) maybeFetch(key string, ltv *lockingTimedValue) {
+	ltv.lock.Lock()
+
+	now := time.Now()
+
+	// by time acquire lock, check whether expired or stale
+	if !ltv.tv.Expiry.IsZero() && now.After(ltv.tv.Expiry) {
+		rc.fetch(key, ltv)
+	}
+	if !ltv.tv.Stale.IsZero() && now.After(ltv.tv.Stale) {
+		rc.fetch(key, ltv)
+	}
+
+	ltv.lock.Unlock()
 }
 
 // Fetch method attempts to fetch a new value for the specified key. If the fetch is successful, it
