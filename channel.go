@@ -25,7 +25,7 @@ type channelMap struct {
 //	if err != nil {
 //	    panic(err)
 //	}
-//	defer cgm.Close()
+//	defer func() { _ = cgm.Close() }()
 func NewChannelMap(setters ...Setter) (Congomap, error) {
 	cgm := &channelMap{
 		db:    make(map[string]*ExpiringValue),

@@ -51,7 +51,7 @@ func loadStoreValueNilRefreshingCacheValue(t *testing.T, cgm *congomap.Refreshin
 // LoadStoreNoLookupNoTTL
 
 func loadStoreNoLookupNoTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	loadStoreNilErrNoLookupDefinedRefreshingCache(t, cgm, which, "miss")
 	// cgm.Store("hit", 42)
 	// loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -65,7 +65,7 @@ func TestLoadStoreNoLookupNoTTLRefreshingCache(t *testing.T) {
 // LoadStoreFailingLookupNoTTL
 
 func loadStoreFailingLookupNoTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailedRefreshingCache(t, cgm, which, "miss")
 	loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -89,7 +89,7 @@ func TestLoadStoreFailingLookupNoTTLRefreshingCache(t *testing.T) {
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
-// 	// defer cgm.Close()
+// 	// defer func() { _ = cgm.Close() }()
 
 // 	// You can still use the regular Load and Store functions, which will not invoke the lookup
 // 	// function.
@@ -116,7 +116,7 @@ func TestLoadStoreFailingLookupNoTTLRefreshingCache(t *testing.T) {
 // }
 
 func loadStoreLookupNoTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreValueNilRefreshingCache(t, cgm, which, "miss")
 	loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -130,7 +130,7 @@ func TestLoadStoreLookupNoTTLRefreshingCache(t *testing.T) {
 // LoadStoreNoLookupBeforeTTL
 
 func loadStoreNoLookupBeforeTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefinedRefreshingCache(t, cgm, which, "miss")
 	loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -144,7 +144,7 @@ func TestLoadStoreNoLookupBeforeTTLRefreshingCache(t *testing.T) {
 // LoadStoreFailingLookupBeforeTTL
 
 func loadStoreFailingLookupBeforeTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailedRefreshingCache(t, cgm, which, "miss")
 	loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -158,7 +158,7 @@ func TestLoadStoreFailingLookupBeforeTTLRefreshingCache(t *testing.T) {
 // LoadStoreLookupBeforeTTL
 
 func loadStoreLookupBeforeTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreValueNilRefreshingCache(t, cgm, which, "miss")
 	loadStoreValueNilRefreshingCache(t, cgm, which, "hit")
@@ -172,7 +172,7 @@ func TestLoadStoreLookupBeforeTTLRefreshingCache(t *testing.T) {
 // LoadStoreNoLookupAfterTTL
 
 func loadStoreNoLookupAfterTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrNoLookupDefinedRefreshingCache(t, cgm, which, "miss")
@@ -187,7 +187,7 @@ func TestLoadStoreNoLookupAfterTTLRefreshingCache(t *testing.T) {
 // LoadStoreFailingLookupAfterTTL
 
 func loadStoreFailingLookupAfterTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrLookupFailedRefreshingCache(t, cgm, which, "miss")
@@ -202,7 +202,7 @@ func TestLoadStoreFailingLookupAfterTTLRefreshingCache(t *testing.T) {
 // LoadStoreLookupAfterTTL
 
 func loadStoreLookupAfterTTLRefreshingCache(t *testing.T, cgm *congomap.RefreshingCache, which string) {
-	// defer cgm.Close()
+	// defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreValueNilRefreshingCache(t, cgm, which, "miss")

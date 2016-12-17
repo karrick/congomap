@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// RefreshingCacheConfig specifies the configuration parameters for a RefreshingCache instance.
 type RefreshingCacheConfig struct {
 	GoodStaleDuration  time.Duration
 	GoodExpiryDuration time.Duration
@@ -60,6 +61,7 @@ func NewRefreshingCache(config *RefreshingCacheConfig) (*RefreshingCache, error)
 	}, nil
 }
 
+// LoadStore loads the value associated with the specified key from the cache.
 func (rc *RefreshingCache) LoadStore(key string) (interface{}, error) {
 	return rc.ensureTopLevelThenAcquire(key, func(ltv *lockingTimedValue) (interface{}, error) {
 		// NOTE: also check whether value filled while waiting for lock above
@@ -118,6 +120,7 @@ func (rc *RefreshingCache) fetch(key string, lv *lockingTimedValue) {
 	lv.tv = newTimedValue(value, err, staleDuration, expiryDuration)
 }
 
+// Store saves the key/value pair to the cache, overwriting whatever was previously stored.
 func (rc *RefreshingCache) Store(key string, value interface{}) {
 	rc.ensureTopLevelThenAcquire(key, func(ltv *lockingTimedValue) (interface{}, error) {
 		ltv.tv = newTimedValue(value, nil, rc.Config.GoodStaleDuration, rc.Config.GoodExpiryDuration)

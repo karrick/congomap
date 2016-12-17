@@ -33,7 +33,7 @@ type lockingValue struct {
 //	if err != nil {
 //	    panic(err)
 //	}
-//	defer cgm.Close()
+//	defer func() { _ = cgm.Close() }()
 func NewTwoLevelMap(setters ...Setter) (Congomap, error) {
 	cgm := &twoLevelMap{
 		db:   make(map[string]*lockingValue),
