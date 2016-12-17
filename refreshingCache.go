@@ -122,7 +122,7 @@ func (rc *RefreshingCache) fetch(key string, lv *lockingTimedValue) {
 
 // Store saves the key/value pair to the cache, overwriting whatever was previously stored.
 func (rc *RefreshingCache) Store(key string, value interface{}) {
-	rc.ensureTopLevelThenAcquire(key, func(ltv *lockingTimedValue) (interface{}, error) {
+	_, _ = rc.ensureTopLevelThenAcquire(key, func(ltv *lockingTimedValue) (interface{}, error) {
 		ltv.tv = newTimedValue(value, nil, rc.Config.GoodStaleDuration, rc.Config.GoodExpiryDuration)
 		return nil, nil
 	})
