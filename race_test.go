@@ -64,7 +64,6 @@ func TestRaceSyncMutexMap(t *testing.T) {
 }
 
 func TestRaceTwoLevelMap(t *testing.T) {
-	t.Skip()
 	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
 	if err != nil {
 		t.Fatal(err)
