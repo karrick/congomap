@@ -31,7 +31,7 @@ type syncAtomicMap struct {
 //	if err != nil {
 //	    panic(err)
 //	}
-//	defer cgm.Close()
+//	defer func() { _ = cgm.Close() }()
 func NewSyncAtomicMap(setters ...Setter) (Congomap, error) {
 	cgm := &syncAtomicMap{halt: make(chan struct{})}
 	cgm.db.Store(make(map[string]*ExpiringValue))

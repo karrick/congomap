@@ -24,7 +24,7 @@ type syncMutexMap struct {
 //	if err != nil {
 //	    panic(err)
 //	}
-//	defer cgm.Close()
+//	defer func() { _ = cgm.Close() }()
 func NewSyncMutexMap(setters ...Setter) (Congomap, error) {
 	cgm := &syncMutexMap{
 		db:   make(map[string]*ExpiringValue),

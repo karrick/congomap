@@ -42,7 +42,7 @@ func ExampleTwoLevelMap_Load() {
 	if err != nil {
 		panic(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	// you can store any Go type in a Congomap
 	cgm.Store("someKeyString", 42)
@@ -84,7 +84,7 @@ func loadValueTrue(t *testing.T, cgm congomap.Congomap, which, key string) {
 // LoadWithoutTTL
 
 func loadNoTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadNilFalse(t, cgm, which, "miss")
 	loadValueTrue(t, cgm, which, "hit")
@@ -118,7 +118,7 @@ func ExampleTTL_1() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	// While the below key-value pair will expire 5 minutes from now, there is no guarantee when
 	// the Reaper, if declared, would be called.
@@ -133,7 +133,7 @@ func ExampleTTL_2() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	key := "someKey"
 
@@ -153,7 +153,7 @@ func ExampleTTL_2() {
 }
 
 func loadBeforeTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadNilFalse(t, cgm, which, "miss")
 	loadValueTrue(t, cgm, which, "hit")
@@ -182,7 +182,7 @@ func TestLoadBeforeTTLTwoLevel(t *testing.T) {
 // LoadAfterTTL
 
 func loadAfterTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadNilFalse(t, cgm, which, "miss")
@@ -223,7 +223,7 @@ func ExampleTwoLevelMap_LoadStore() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	// You can still use the regular Load and Store functions, which will not invoke the lookup
 	// function.
@@ -282,7 +282,7 @@ func loadStoreValueNil(t *testing.T, cgm congomap.Congomap, which, key string) {
 // LoadStoreNoLookupNoTTL
 
 func loadStoreNoLookupNoTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -311,7 +311,7 @@ func TestLoadStoreNoLookupNoTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupNoTTL
 
 func loadStoreFailingLookupNoTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -350,7 +350,7 @@ func ExampleLookup() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	// You can still use the regular Load and Store functions, which will not invoke the lookup
 	// function.
@@ -377,7 +377,7 @@ func ExampleLookup() {
 }
 
 func loadStoreLookupNoTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -406,7 +406,7 @@ func TestLoadStoreLookupNoTTLTwoLevelMap(t *testing.T) {
 // LoadStoreNoLookupBeforeTTL
 
 func loadStoreNoLookupBeforeTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -435,7 +435,7 @@ func TestLoadStoreNoLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupBeforeTTL
 
 func loadStoreFailingLookupBeforeTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -464,7 +464,7 @@ func TestLoadStoreFailingLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreLookupBeforeTTL
 
 func loadStoreLookupBeforeTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	loadStoreValueNil(t, cgm, which, "miss")
 	loadStoreValueNil(t, cgm, which, "hit")
@@ -493,7 +493,7 @@ func TestLoadStoreLookupBeforeTTLTwoLevelMap(t *testing.T) {
 // LoadStoreNoLookupAfterTTL
 
 func loadStoreNoLookupAfterTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrNoLookupDefined(t, cgm, which, "miss")
@@ -523,7 +523,7 @@ func TestLoadStoreNoLookupAfterTTLTwoLevelMap(t *testing.T) {
 // LoadStoreFailingLookupAfterTTL
 
 func loadStoreFailingLookupAfterTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreNilErrLookupFailed(t, cgm, which, "miss")
@@ -553,7 +553,7 @@ func TestLoadStoreFailingLookupAfterTTLTwoLevelMap(t *testing.T) {
 // LoadStoreLookupAfterTTL
 
 func loadStoreLookupAfterTTL(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("hit", 42)
 	time.Sleep(time.Millisecond)
 	loadStoreValueNil(t, cgm, which, "miss")
@@ -588,7 +588,7 @@ func ExampleTwoLevelMap_Pairs() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	cgm.Store("abc", 123)
 
@@ -599,7 +599,7 @@ func ExampleTwoLevelMap_Pairs() {
 }
 
 func testPairs(t *testing.T, cgm congomap.Congomap, which string) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	cgm.Store("first", "Clark")
 	cgm.Store("last", "Kent")
 	for pair := range cgm.Pairs() {
@@ -639,7 +639,7 @@ func ExampleReaper() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	cgm.Store("someKey", 42) // reaper is not called because nothing was replaced
 	cgm.Delete("someKey")    // if declared, reaper is called during this delete.
@@ -655,7 +655,7 @@ func ExampleTwoLevelMap_Delete() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	cgm.Store("someKey", 42) // reaper is not called because nothing was replaced
 	cgm.Delete("someKey")    // if declared, reaper is called during this delete.
@@ -676,7 +676,7 @@ func createReaper(t *testing.T, wg *sync.WaitGroup, which string) func(interface
 func createReaperTesterInvokeDuringDelete(t *testing.T, wg *sync.WaitGroup) func(congomap.Congomap) {
 	expected := 42
 	return func(cgm congomap.Congomap) {
-		defer cgm.Close()
+		defer func() { _ = cgm.Close() }()
 		cgm.Store("hit", expected)
 		wg.Add(1)
 		cgm.Delete("hit")
@@ -718,7 +718,7 @@ func ExampleTwoLevelMap_GC() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	cgm.Store("someKey", &congomap.ExpiringValue{Value: 42, Expiry: time.Now().Add(time.Millisecond)})
 	time.Sleep(2 * time.Millisecond)
@@ -729,7 +729,7 @@ func ExampleTwoLevelMap_GC() {
 func createReaperTesterInvokeDuringGC(t *testing.T, wg *sync.WaitGroup) func(congomap.Congomap) {
 	expected := 42
 	return func(cgm congomap.Congomap) {
-		defer cgm.Close()
+		defer func() { _ = cgm.Close() }()
 		cgm.Store("hit", &congomap.ExpiringValue{Value: expected, Expiry: time.Now().Add(time.Nanosecond)})
 		time.Sleep(time.Millisecond)
 		wg.Add(1)
@@ -806,7 +806,7 @@ func ExampleTwoLevelMap_Keys() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	cgm.Store("abc", 123)
 	cgm.Store("def", 456)

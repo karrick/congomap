@@ -12,7 +12,7 @@ import (
 )
 
 func testRace(t *testing.T, cgm congomap.Congomap) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	const tasks = 1000
 	keys := []string{"just", "a", "few", "keys", "to", "force", "lock", "contention"}

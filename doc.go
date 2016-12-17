@@ -41,7 +41,7 @@ needed.
     if err != nil {
         panic(err)
     }
-    defer cgm.Close()
+    defer func() { _ = cgm.Close() }()
 
     // you can store any Go type in a Congomap
     cgm.Store("someKeyString", 42)

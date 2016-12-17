@@ -77,7 +77,7 @@ func preloadCongomap(cgm congomap.Congomap) {
 }
 
 func parallelLoaders(b *testing.B, cgm congomap.Congomap) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	preloadCongomap(cgm)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -88,7 +88,7 @@ func parallelLoaders(b *testing.B, cgm congomap.Congomap) {
 }
 
 func parallelLoadStorers(b *testing.B, cgm congomap.Congomap) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 	preloadCongomap(cgm)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -237,7 +237,7 @@ func BenchmarkLoadStoreTTLTwoLevelMap(b *testing.B) {
 // benchmarks
 
 func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, loadStorerCount int) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	preloadCongomap(cgm)
 
@@ -463,7 +463,7 @@ func BenchmarkLowConcurrencySlowLookupTwoLevelMap(b *testing.B) {
 // High Contention
 
 func benchmarkHighContention(cgm congomap.Congomap) {
-	defer cgm.Close()
+	defer func() { _ = cgm.Close() }()
 
 	const tasks = 1000
 	keys := []string{"just", "a", "few", "keys", "to", "force", "lock", "contention"}
