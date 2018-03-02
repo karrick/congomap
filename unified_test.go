@@ -667,7 +667,7 @@ func createReaper(t *testing.T, wg *sync.WaitGroup, which string) func(interface
 	expected := 42
 	return func(value interface{}) {
 		if v, ok := value.(int); !ok || v != expected {
-			t.Errorf("reaper receives value during delete; Which: %s; Key: %q; Actual: %#v; Expected: %#v", which, value, expected)
+			t.Errorf("reaper receives value during delete; Which: %s; Actual: %#v; Expected: %#v", which, value, expected)
 		}
 		wg.Done()
 	}
