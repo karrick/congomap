@@ -1,13 +1,9 @@
-package congomap_test
+package congomap
 
 import (
 	"math/rand"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/karrick/congomap"
 )
 
 var states = []string{
@@ -60,464 +56,163 @@ var states = []string{
 	"Wyoming",
 }
 
+var preventCompilerOptimizingOutBenchmarks interface{}
+
 func randomState() string {
 	return states[rand.Intn(len(states))]
 }
 
-func randomKey() string {
-	return randomState() + "-" + randomState()
-}
+func withLoadedCongomap(cm Congomap, loaders, storers, loadstorers int, fn func()) {
+	var stop bool
+	exited := make(chan struct{})
+	for i := 0; i < loaders; i++ {
+		go func() {
+			for !stop {
+				cm.Load(randomState())
+			}
+			exited <- struct{}{}
+		}()
+	}
+	for i := 0; i < storers; i++ {
+		go func() {
+			for !stop {
+				cm.Store(randomState(), randomState())
+			}
+			exited <- struct{}{}
+		}()
+	}
+	for i := 0; i < loadstorers; i++ {
+		go func() {
+			for !stop {
+				cm.LoadStore(randomState())
+			}
+			exited <- struct{}{}
+		}()
+	}
 
-func preloadCongomap(cgm congomap.Congomap) {
-	for _, k1 := range states {
-		for _, k2 := range states {
-			cgm.Store(k1+"-"+k2, randomState())
-		}
+	fn()
+
+	stop = true
+	for i := 0; i < loaders+storers+loadstorers; i++ {
+		<-exited
 	}
 }
 
-func parallelLoaders(b *testing.B, cgm congomap.Congomap) {
-	defer func() { _ = cgm.Close() }()
-	preloadCongomap(cgm)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
+func parallelBench(b *testing.B, cm Congomap, fn func(*testing.PB)) {
+	// doesn't necessarily fill the entire map
+	for i := 0; i < len(states); i++ {
+		cm.Store(randomState(), randomState())
+	}
+	b.RunParallel(fn)
+}
+
+func parallelLoaders(b *testing.B, cm Congomap) {
+	parallelBench(b, cm, func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = cgm.Load(randomKey())
+			cm.Load(randomState())
 		}
 	})
 }
 
-func parallelLoadStorers(b *testing.B, cgm congomap.Congomap) {
-	defer func() { _ = cgm.Close() }()
-	preloadCongomap(cgm)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
+func parallelLoadStorers(b *testing.B, cm Congomap) {
+	parallelBench(b, cm, func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = cgm.LoadStore(randomKey())
+			cm.LoadStore(randomState())
 		}
 	})
 }
 
-// Load
-
-func BenchmarkLoadChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkChannelMapLoad(b *testing.B) {
+	cm, _ := NewChannelMap()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
 }
 
-func BenchmarkLoadSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkChannelMapLoadStore(b *testing.B) {
+	cm, _ := NewChannelMap()
+	defer cm.Halt()
+	parallelLoadStorers(b, cm)
 }
 
-func BenchmarkLoadSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncAtomicMapLoad(b *testing.B) {
+	cm, _ := NewSyncAtomicMap()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
 }
 
-func BenchmarkLoadTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncAtomicMapLoadTTL(b *testing.B) {
+	cm, _ := NewSyncAtomicMap(TTL(time.Second))
+	defer cm.Halt()
+	parallelLoaders(b, cm)
 }
 
-// LoadTTL
-
-func BenchmarkLoadTTLChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncAtomicMapLoadStore(b *testing.B) {
+	cm, _ := NewSyncAtomicMap()
+	defer cm.Halt()
+	parallelLoadStorers(b, cm)
 }
 
-func BenchmarkLoadTTLSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncMutexMapLoad(b *testing.B) {
+	cm, _ := NewSyncMutexMap()
+	defer cm.Halt()
+	parallelLoaders(b, cm)
 }
 
-func BenchmarkLoadTTLSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncMutexMapLoadTTL(b *testing.B) {
+	cm, _ := NewSyncMutexMap(TTL(time.Second))
+	defer cm.Halt()
+	parallelLoaders(b, cm)
 }
 
-func BenchmarkLoadTTLTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoaders(b, cgm)
+func BenchmarkSyncMutexMapLoadStore(b *testing.B) {
+	cm, _ := NewSyncMutexMap()
+	defer cm.Halt()
+	parallelLoadStorers(b, cm)
 }
 
-// LoadStore
+func _BenchmarkSyncMutexMapManyLoadersLoaderPerspective(b *testing.B) {
+	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
+	cm, _ := NewSyncMutexMap(Lookup(lookup))
+	defer cm.Halt()
 
-func BenchmarkLoadStoreChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
+	var r interface{}
+	withLoadedCongomap(cm, 20, 1, 1, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.Load(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
 }
 
-func BenchmarkLoadStoreSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
+func _BenchmarkChannelMapManyLoadersLoaderPerspective(b *testing.B) {
+	lookup := func(_ string) (interface{}, error) { return randomState(), nil }
+	cm, _ := NewChannelMap(Lookup(lookup))
+	defer cm.Halt()
+
+	var r interface{}
+	withLoadedCongomap(cm, 20, 1, 1, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.Load(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
 }
 
-func BenchmarkLoadStoreSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
+func _BenchmarkSyncMutexMapManyLoadersLoadStorerPerspective(b *testing.B) {
+	var r interface{}
+	cm, _ := NewSyncMutexMap()
+	defer cm.Halt()
+
+	withLoadedCongomap(cm, 20, 1, 1, func() {
+		for i := 0; i < b.N; i++ {
+			r, _ = cm.LoadStore(randomState())
+		}
+	})
+
+	preventCompilerOptimizingOutBenchmarks = r
 }
 
-func BenchmarkLoadStoreTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap()
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
-}
-
-// LoadStoreTTL
-
-func BenchmarkLoadStoreTTLChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
-}
-
-func BenchmarkLoadStoreTTLSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
-}
-
-func BenchmarkLoadStoreTTLSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
-}
-
-func BenchmarkLoadStoreTTLTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	parallelLoadStorers(b, cgm)
-}
-
-// benchmarks
-
-func benchmark(b *testing.B, cgm congomap.Congomap, loaderCount, storerCount, loadStorerCount int) {
-	defer func() { _ = cgm.Close() }()
-
-	preloadCongomap(cgm)
-
-	var stop atomic.Value
-	var wg sync.WaitGroup
-
-	wg.Add(loaderCount)
-	for i := 0; i < loaderCount; i++ {
-		go func() {
-			for stop.Load() == nil {
-				_, _ = cgm.Load(randomKey())
-			}
-			wg.Done()
-		}()
-	}
-
-	wg.Add(storerCount)
-	for i := 0; i < storerCount; i++ {
-		go func() {
-			for stop.Load() == nil {
-				cgm.Store(randomKey(), randomState())
-			}
-			wg.Done()
-		}()
-	}
-
-	wg.Add(loadStorerCount)
-	for i := 0; i < loadStorerCount; i++ {
-		go func() {
-			for stop.Load() == nil {
-				_, _ = cgm.LoadStore(randomKey())
-			}
-			wg.Done()
-		}()
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		_, _ = cgm.LoadStore(randomKey())
-	}
-
-	stop.Store(struct{}{})
-	wg.Wait()
-}
-
-func randomSlowLookup(_ string) (interface{}, error) {
-	delay := 50*time.Millisecond + time.Duration(rand.Intn(100))*time.Millisecond
-	time.Sleep(delay)
-	return 42, nil
-}
-
-// High Concurrency
-
-func BenchmarkHighConcurrencyFastLookupChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencyFastLookupSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencyFastLookupSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencyFastLookupTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-// High Read Concurrency
-
-func BenchmarkHighReadConcurrencyFastLookupChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1000, 0, 0)
-}
-
-func BenchmarkHighReadConcurrencyFastLookupSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1000, 0, 0)
-}
-
-func BenchmarkHighReadConcurrencyFastLookupSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1000, 0, 0)
-}
-
-func BenchmarkHighReadConcurrencyFastLookupTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1000, 0, 0)
-}
-
-// lookup takes random time
-
-func BenchmarkHighConcurrencySlowLookupChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencySlowLookupSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencySlowLookupSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-func BenchmarkHighConcurrencySlowLookupTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 1000)
-}
-
-// Low Concurrency
-
-func BenchmarkLowConcurrencyFastLookupChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencyFastLookupSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencyFastLookupSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencyFastLookupTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.TTL(time.Minute))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-// lookup takes random time
-
-func BenchmarkLowConcurrencySlowLookupChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencySlowLookupSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencySlowLookupSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-func BenchmarkLowConcurrencySlowLookupTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomSlowLookup))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmark(b, cgm, 1, 1, 10)
-}
-
-// High Contention
-
-func benchmarkHighContention(cgm congomap.Congomap) {
-	defer func() { _ = cgm.Close() }()
-
-	const tasks = 1000
-	keys := []string{"just", "a", "few", "keys", "to", "force", "lock", "contention"}
-
-	var wg sync.WaitGroup
-	wg.Add(tasks)
-
-	for i := 0; i < tasks; i++ {
-		go func() {
-			const iterations = 1000
-
-			for j := 0; j < iterations; j++ {
-				if j%4 == 0 {
-					cgm.Delete(keys[rand.Intn(len(keys))])
-				} else {
-					_, _ = cgm.LoadStore(keys[rand.Intn(len(keys))])
-				}
-			}
-
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
-}
-
-func BenchmarkHighContentionChannelMap(b *testing.B) {
-	cgm, err := congomap.NewChannelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmarkHighContention(cgm)
-}
-
-func BenchmarkHighContentionSyncAtomicMap(b *testing.B) {
-	cgm, err := congomap.NewSyncAtomicMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmarkHighContention(cgm)
-}
-
-func BenchmarkHighContentionSyncMutexMap(b *testing.B) {
-	cgm, err := congomap.NewSyncMutexMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmarkHighContention(cgm)
-}
-
-func BenchmarkHighContentionTwoLevelMap(b *testing.B) {
-	cgm, err := congomap.NewTwoLevelMap(congomap.Lookup(randomFailOnLookup), congomap.TTL(time.Second))
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmarkHighContention(cgm)
-}
+// consider adding loaded benchmarks for other types
+// consider loading up the map with 10k entries
