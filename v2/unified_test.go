@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karrick/congomap/v2"
+	congomap "github.com/karrick/congomap/v2"
 )
 
 var errLookupFailed = errors.New("lookup failed")
