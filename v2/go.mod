@@ -1,1 +1,1 @@
-module "github.com/karrick/congomap/v2"
+module github.com/karrick/congomap/v2
