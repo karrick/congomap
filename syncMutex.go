@@ -13,6 +13,9 @@ type syncMutexMap struct {
 	lookup   func(string) (interface{}, error)
 	reaper   func(interface{})
 	ttl      bool
+
+	loading      map[string]*sync.WaitGroup
+	loading_lock sync.Mutex
 }
 
 // NewSyncMutexMap returns a map that uses sync.RWMutex to serialize
@@ -21,6 +24,8 @@ func NewSyncMutexMap(setters ...Setter) (Congomap, error) {
 	cgm := &syncMutexMap{
 		db:   make(map[string]expiringValue),
 		halt: make(chan struct{}),
+
+		loading: make(map[string]*sync.WaitGroup),
 	}
 	for _, setter := range setters {
 		if err := setter(cgm); err != nil {
@@ -123,22 +128,55 @@ func (cgm *syncMutexMap) Store(key string, value interface{}) {
 // sets the value in the map to that returned by the lookup function.
 func (cgm *syncMutexMap) LoadStore(key string) (interface{}, error) {
 	cgm.lock.Lock()
-	defer cgm.lock.Unlock()
 	ev, ok := cgm.db[key]
 	if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
 		return ev.value, nil
 	}
-	// key was expired or not in db
-	value, err := cgm.lookup(key)
-	if err != nil {
-		return nil, err
+	cgm.lock.Unlock() // Unlock whole map, since we are just loading
+
+	// Lock the loading map
+	cgm.loading_lock.Lock()
+	wg, ok := cgm.loading[key]
+
+	// If someone else is already loading, lets just wait on them
+	if ok {
+		cgm.loading_lock.Unlock()
+		wg.Wait()
+		return cgm.LoadStore(key) // TODO: don't recurse?
+	} else {
+		// No one else is loading
+
+		// Lets create a wait group, and unlock the loading map
+		var wg sync.WaitGroup
+		wg.Add(1)
+		cgm.loading[key] = &wg
+		cgm.loading_lock.Unlock()
+
+		// Do the actual load
+		// key was expired or not in db
+		value, err := cgm.lookup(key)
+		if err != nil {
+			return nil, err
+		}
+		ev = expiringValue{value: value}
+		if cgm.ttl {
+			ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+		}
+
+		// We have the value, lets set it and remove the loading entry
+		cgm.lock.Lock()
+		cgm.db[key] = ev
+		cgm.lock.Unlock()
+
+		// Remove our entry of loading
+		cgm.loading_lock.Lock()
+		delete(cgm.loading, key)
+		cgm.loading_lock.Unlock()
+
+		// mark the thing as loaded
+		wg.Done()
+		return value, nil
 	}
-	ev = expiringValue{value: value}
-	if cgm.ttl {
-		ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
-	}
-	cgm.db[key] = ev
-	return value, nil
 }
 
 // Keys returns an array of key values stored in the map.

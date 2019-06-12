@@ -1,6 +1,7 @@
 package congomap
 
 import (
+	"sync"
 	"time"
 )
 
@@ -12,6 +13,8 @@ type channelMap struct {
 	queue    chan func()
 	reaper   func(interface{})
 	ttl      bool
+
+	loading map[string]*result
 }
 
 // NewChannelMap returns a map that uses channels to serialize
@@ -20,9 +23,10 @@ type channelMap struct {
 // channel resources back to the runtime.
 func NewChannelMap(setters ...Setter) (Congomap, error) {
 	cgm := &channelMap{
-		db:    make(map[string]expiringValue),
-		halt:  make(chan struct{}),
-		queue: make(chan func()),
+		db:      make(map[string]expiringValue),
+		halt:    make(chan struct{}),
+		queue:   make(chan func()),
+		loading: make(map[string]*result),
 	}
 	for _, setter := range setters {
 		if err := setter(cgm); err != nil {
@@ -128,27 +132,64 @@ func (cgm *channelMap) Store(key string, value interface{}) {
 // the map. If it's not in the map, it calls the lookup function, and
 // sets the value in the map to that returned by the lookup function.
 func (cgm *channelMap) LoadStore(key string) (interface{}, error) {
-	rq := make(chan result)
+	rq := make(chan *result)
 	cgm.queue <- func() {
 		ev, ok := cgm.db[key]
 		if ok && (!cgm.ttl || ev.expiry > time.Now().UnixNano()) {
-			rq <- result{value: ev.value, ok: true}
+			rq <- &result{value: ev.value, ok: true}
 			return
 		}
-		// key not there or expired
-		value, err := cgm.lookup(key)
-		if err != nil {
-			rq <- result{value: nil, ok: false, err: err}
+
+		// Check if we are loading
+		res, ok := cgm.loading[key]
+
+		// if someone is loading it, lets just spit back that result
+		if ok {
+			rq <- res
 			return
 		}
-		ev = expiringValue{value: value}
-		if cgm.ttl {
-			ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
-		}
-		cgm.db[key] = ev
-		rq <- result{value: value, ok: true}
+
+		// Mark this as loading
+		var wg sync.WaitGroup
+		wg.Add(1)
+		res = &result{wg: &wg}
+		cgm.loading[key] = res
+
+		// fire a goroutine to load this key
+		go func(k string, w *sync.WaitGroup, r *result) {
+			value, err := cgm.lookup(key)
+			// if there was an error, mark it as done
+			// Since we already gaurantee a single writer for this
+			if err != nil {
+				cgm.queue <- func() {
+					delete(cgm.loading, k)
+					r.value = nil
+					r.ok = false
+					r.err = err
+					wg.Done()
+				}
+				return
+			}
+			ev = expiringValue{value: value}
+			if cgm.ttl {
+				ev.expiry = time.Now().UnixNano() + int64(cgm.duration)
+			}
+			r.value = value
+			r.ok = true
+
+			cgm.queue <- func() {
+				cgm.db[key] = ev
+				delete(cgm.loading, k)
+				wg.Done()
+			}
+
+		}(key, &wg, res)
+		rq <- res
 	}
 	res := <-rq
+	if res.wg != nil {
+		res.wg.Wait()
+	}
 	return res.value, res.err
 }
 
@@ -193,6 +234,7 @@ type result struct {
 	value interface{}
 	ok    bool
 	err   error
+	wg    *sync.WaitGroup
 }
 
 func (cgm *channelMap) run() {
