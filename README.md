@@ -8,6 +8,15 @@ I wrote it to determine which method produced the most readable code, and the mo
 
 [![GoDoc](https://godoc.org/github.com/karrick/congomap?status.svg)](https://godoc.org/github.com/karrick/congomap)
 
+## DEPRECATED
+
+While this library remains a nice benchmarking tool for comparing
+different concurrent Go map data structures, in practice I prefer to
+use its successor, [goswarm](https://github.com/karrick/goswarm),
+which uses the fastest version of the data structure for this library,
+adds better error handling, provides additional features, and still
+maintained.
+
 ## Example
 
 This library exposes the `Congomap` interface, and a few concrete types that adhere to that
